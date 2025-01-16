@@ -1,0 +1,30 @@
+:root {
+  /* Colors */
+  --background: rgba(13, 17, 23, 0.95);
+  
+  /* Glass */
+  --glass-background: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: rgba(0, 0, 0, 0.3);
+  
+  /* Primary Colors */
+  --color-primary: #a78bfa;
+  --color-primary-hover: #c4b5fd;
+  --color-primary-light: rgba(167, 139, 250, 0.1);
+  
+  /* Text Colors */
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  
+  /* Status Colors */
+  --status-success: #34d399;
+  --status-error: #fb7185;
+  --status-warning: #fbbf24;
+  
+  /* Glassmorphism */
+  --glass-morph-background: rgba(255, 255, 255, 0.05);
+  --glass-morph-backdrop-filter: blur(12px);
+  --glass-morph-border: 1px solid rgba(255, 255, 255, 0.1);
+  --glass-morph-box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  --glass-morph-shine: linear-gradient(120deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0) 70%);
+} 
