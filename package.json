@@ -24,8 +24,12 @@
     "@electron-toolkit/preload": "^3.0.0",
     "@electron-toolkit/utils": "^3.0.0",
     "@fortawesome/fontawesome-free": "^6.7.2",
+    "@vueuse/core": "^12.4.0",
+    "axios": "^1.7.9",
     "electron-updater": "^6.1.7",
-    "lucide-vue-next": "^0.471.0"
+    "lucide-vue-next": "^0.471.0",
+    "pinia": "^2.3.1",
+    "vue-router": "^4.5.0"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^1.0.2",
@@ -33,6 +37,7 @@
     "@electron-toolkit/tsconfig": "^1.0.1",
     "@rushstack/eslint-patch": "^1.10.3",
     "@types/node": "^20.14.8",
+    "@types/vue-router": "^2.0.0",
     "@vitejs/plugin-vue": "^5.0.5",
     "@vue/eslint-config-prettier": "^9.0.0",
     "@vue/eslint-config-typescript": "^13.0.0",

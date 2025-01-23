@@ -4,8 +4,15 @@
       <LogoText />
 
       <div class="form-group">
-        <label class="label">Identifiant</label>
-        <input v-model="username" type="text" required class="input" />
+        <label class="label">Email</label>
+        <input
+          v-model="email"
+          type="email"
+          required
+          class="input"
+          placeholder="exemple@karlog.fr"
+          :disabled="isLoading"
+        />
       </div>
 
       <div class="form-group">
@@ -16,37 +23,72 @@
             :type="showPassword ? 'text' : 'password'"
             required
             class="input"
+            :disabled="isLoading"
           />
-          <button type="button" class="visibility-button" @click="showPassword = !showPassword">
+          <button
+            type="button"
+            class="visibility-button"
+            @click="showPassword = !showPassword"
+            :disabled="isLoading"
+          >
             <i class="fas" :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
           </button>
         </div>
       </div>
 
       <div v-if="loginError" class="error-message">
+        <i class="fas fa-exclamation-circle"></i>
         {{ loginError }}
       </div>
 
-      <button type="submit" class="submit-button">Se connecter</button>
+      <button type="submit" class="submit-button" :disabled="isLoading">
+        <span v-if="isLoading">Connexion en cours...</span>
+        <span v-else>Se connecter</span>
+      </button>
     </form>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import LogoText from './LogoText.vue'
+import authService from '../services/auth.service'
+import type { LoginCredentials } from '../types/auth'
 
-const username = ref('')
+const router = useRouter()
+const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const loginError = ref('')
+const isLoading = ref(false)
 
 const handleSubmit = async () => {
+  if (isLoading.value) return
+
   try {
-    // Implémentez votre logique de connexion ici
+    isLoading.value = true
     loginError.value = ''
-  } catch (error) {
-    loginError.value = error instanceof Error ? error.message : 'Une erreur est survenue'
+
+    const credentials: LoginCredentials = {
+      email: email.value,
+      password: password.value
+    }
+
+    console.log(credentials)
+
+    await authService.login(credentials)
+    router.push('/')
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      loginError.value = 'Email ou mot de passe incorrect'
+    } else if (error.response?.data?.message) {
+      loginError.value = error.response.data.message
+    } else {
+      loginError.value = JSON.stringify(error)
+    }
+  } finally {
+    isLoading.value = false
   }
 }
 </script>

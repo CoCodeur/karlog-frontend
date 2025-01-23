@@ -38,7 +38,6 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 2rem;
-  padding-bottom: calc(2rem + 32px);
+  padding: 2rem 2rem calc(2rem + 32px);
 }
 </style>
