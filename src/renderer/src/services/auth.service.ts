@@ -1,8 +1,6 @@
 import axios from 'axios';
 import type { AuthResponse, LoginCredentials } from '../types/auth';
 
-const API_URL = import.meta.env.VITE_API_URL;
-
 class AuthService {
   private static instance: AuthService;
   private readonly storageKeys = {
@@ -25,7 +23,7 @@ class AuthService {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
       const response = await axios.post<AuthResponse>(
-        `${API_URL}/auth/login`,
+        '/api/auth/login',
         credentials
       );
       console.log(response.status)
@@ -45,7 +43,7 @@ class AuthService {
         throw new Error('No refresh token available');
       }
 
-      const response = await axios.post<AuthResponse>(`${API_URL}/auth/refresh`, {
+      const response = await axios.post<AuthResponse>('/api/auth/refresh', {
         refresh_token
       });
 

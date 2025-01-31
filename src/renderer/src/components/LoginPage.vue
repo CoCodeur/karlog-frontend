@@ -20,6 +20,7 @@
         <div class="password-input">
           <input
             v-model="password"
+            placeholder="********"
             :type="showPassword ? 'text' : 'password'"
             required
             class="input"
@@ -75,17 +76,18 @@ const handleSubmit = async () => {
       password: password.value
     }
 
-    console.log(credentials)
-
     await authService.login(credentials)
     router.push('/')
   } catch (error: any) {
+    console.error('Login error:', error)
     if (error.response?.status === 401) {
       loginError.value = 'Email ou mot de passe incorrect'
     } else if (error.response?.data?.message) {
       loginError.value = error.response.data.message
+    } else if (error.message) {
+      loginError.value = error.message
     } else {
-      loginError.value = JSON.stringify(error)
+      loginError.value = 'Une erreur est survenue lors de la connexion'
     }
   } finally {
     isLoading.value = false
@@ -97,18 +99,11 @@ const handleSubmit = async () => {
 @keyframes fadeIn {
   from {
     opacity: 0;
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
-  }
-}
-
-@keyframes focusRing {
-  0% {
-    box-shadow: 0 0 0 0px var(--color-primary-light);
-  }
-  100% {
-    box-shadow: 0 0 0 4px transparent;
+    transform: translateY(0);
   }
 }
 
@@ -133,9 +128,12 @@ const handleSubmit = async () => {
   border-radius: 16px;
   animation: fadeIn 0.8s ease-out;
   position: relative;
+  overflow: hidden;
 }
 
 .login-form {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
@@ -163,7 +161,7 @@ const handleSubmit = async () => {
   width: 100%;
   padding: 12px;
   background: var(--glass-background);
-  border: 1px solid var(--glass-border);
+  border: var(--glass-morph-border);
   border-radius: 8px;
   color: var(--text-primary);
   font-size: 14px;
@@ -174,7 +172,12 @@ const handleSubmit = async () => {
   outline: none;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 1px var(--color-primary);
-  animation: focusRing 2s ease-out;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .input::placeholder {
@@ -206,8 +209,13 @@ const handleSubmit = async () => {
   transition: color 0.3s ease;
 }
 
-.visibility-button:hover {
+.visibility-button:not(:disabled):hover {
   color: var(--color-primary);
+}
+
+.visibility-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .visibility-button i {
@@ -216,25 +224,32 @@ const handleSubmit = async () => {
 
 .submit-button {
   width: 100%;
-  padding: 12px;
+  padding: 1rem;
   background: var(--color-primary);
   color: white;
   border: none;
   border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 1.1rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  letter-spacing: 0.02em;
 }
 
-.submit-button:hover {
+.submit-button:disabled {
+  background: rgba(137, 87, 229, 0.3);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.submit-button:not(:disabled):hover {
   background: var(--color-primary-hover);
   transform: translateY(-1px);
 }
 
-.submit-button:active {
+.submit-button:not(:disabled):active {
   transform: translateY(0);
 }
 
@@ -242,11 +257,16 @@ const handleSubmit = async () => {
   color: var(--status-error);
   font-size: 13px;
   padding: 8px 12px;
-  background: color-mix(in srgb, var(--status-error) 15%, transparent);
+  background: rgba(255, 77, 77, 0.1);
   border-radius: 6px;
   display: flex;
   align-items: center;
   gap: 8px;
   animation: errorFade 0.3s ease-out;
+  border: 1px solid rgba(255, 77, 77, 0.2);
+}
+
+.error-message i {
+  font-size: 16px;
 }
 </style>

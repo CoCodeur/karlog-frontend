@@ -1,12 +1,18 @@
 <template>
   <div class="status-bar">
-    <div class="status-item" :class="{ active: isOnline }">
-      <i class="fa-solid" :class="isOnline ? 'fa-wifi' : 'fa-circle-xmark'"></i>
-      <span>{{ isOnline ? 'Connecté' : 'Hors ligne' }}</span>
-    </div>
-    <div class="status-item" :class="{ active: hasNFCReader }">
-      <i class="fa-solid fa-usb"></i>
-      <span>{{ hasNFCReader ? 'Lecteur NFC connecté' : 'Pas de lecteur NFC' }}</span>
+    <div class="status-content">
+      <div class="status-item" :class="{ 'is-connected': isOnline }">
+        <i class="fas" :class="isOnline ? 'fa-wifi' : 'fa-wifi-slash'"></i>
+        <span>{{ isOnline ? 'Connecté' : 'Hors ligne' }}</span>
+      </div>
+      <div class="status-item" :class="{ 'is-connected': isNfcConnected }">
+        <i class="fas fa-credit-card"></i>
+        <span>{{ isNfcConnected ? 'Lecteur NFC connecté' : 'Lecteur NFC déconnecté' }}</span>
+      </div>
+      <div class="status-item">
+        <i class="fas fa-clock"></i>
+        <span>{{ currentTime }}</span>
+      </div>
     </div>
   </div>
 </template>
@@ -14,33 +20,27 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 
+const currentTime = ref(new Date().toLocaleTimeString())
 const isOnline = ref(navigator.onLine)
-const hasNFCReader = ref(false)
+const isNfcConnected = ref(false) // À connecter avec votre service NFC
+
+let timer: number
 
 const updateOnlineStatus = () => {
   isOnline.value = navigator.onLine
 }
 
-// Simulation de la détection du lecteur NFC
-// À remplacer par votre logique réelle de détection NFC
-const checkNFCReader = async () => {
-  try {
-    // Ici, ajoutez votre logique de détection du lecteur NFC
-    // Par exemple, via une API Electron ou une autre méthode
-    hasNFCReader.value = false // À remplacer par la vraie détection
-  } catch (error) {
-    hasNFCReader.value = false
-    console.error('Erreur lors de la détection du lecteur NFC:', error)
-  }
-}
-
 onMounted(() => {
+  timer = setInterval(() => {
+    currentTime.value = new Date().toLocaleTimeString()
+  }, 1000)
+
   window.addEventListener('online', updateOnlineStatus)
   window.addEventListener('offline', updateOnlineStatus)
-  checkNFCReader()
 })
 
 onUnmounted(() => {
+  clearInterval(timer)
   window.removeEventListener('online', updateOnlineStatus)
   window.removeEventListener('offline', updateOnlineStatus)
 })
@@ -52,31 +52,37 @@ onUnmounted(() => {
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--glass-morph-background);
-  backdrop-filter: var(--glass-morph-backdrop-filter);
-  border-top: var(--glass-morph-border);
-  box-shadow: var(--glass-morph-box-shadow);
-  padding: 12px 24px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 24px;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
   z-index: 1000;
+}
+
+.status-content {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1.5rem;
+  padding: 0 1rem;
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 
 .status-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--status-error);
-  transition: color 0.2s ease;
+  gap: 0.5rem;
+  opacity: 0.5;
+  transition: all 0.3s ease;
 }
 
-.status-item.active {
-  color: var(--status-success);
+.status-item.is-connected {
+  opacity: 1;
+  color: var(--color-success, #4caf50);
 }
 
 .status-item i {
-  font-size: 16px;
+  font-size: 12px;
 }
 </style> 

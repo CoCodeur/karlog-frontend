@@ -1,0 +1,302 @@
+<template>
+  <div class="card">
+    <div class="card-header">
+      <div class="icon-wrapper">
+        <i class="fas fa-plus"></i>
+      </div>
+      <h2 class="card-title">Nouvelle Tâche</h2>
+    </div>
+    
+    <form @submit.prevent="handleSubmit" class="card-form">
+      <div class="form-grid">
+        <div class="form-group span-full">
+          <label class="form-label">Nom de la tâche</label>
+          <input
+            class="form-input"
+            type="text"
+            v-model="formData.name"
+            required
+            placeholder="ex: Vidange"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Immatriculation</label>
+          <input
+            class="form-input"
+            type="text"
+            v-model="formData.immatriculation"
+            required
+            placeholder="AB-123-CD"
+            pattern="[A-Z]{2}-[0-9]{3}-[A-Z]{2}"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Modèle du véhicule</label>
+          <input
+            class="form-input"
+            type="text"
+            v-model="formData.vehicle_model"
+            required
+            placeholder="ex: Renault Clio"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Temps estimé</label>
+          <input
+            class="form-input"
+            type="number"
+            v-model="formData.hours"
+            required
+            min="0"
+            step="0.5"
+            placeholder="Heures"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Prix</label>
+          <input
+            class="form-input"
+            type="number"
+            v-model="formData.price"
+            required
+            min="0"
+            step="0.01"
+            placeholder="€"
+          />
+        </div>
+      </div>
+
+      <button type="submit" class="button-primary">
+        <i class="fas fa-plus"></i>
+        <span>Créer la tâche</span>
+      </button>
+    </form>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import authService from '../../services/auth.service'
+import { useToast } from '../../composables/useToast'
+
+const { show: showToast } = useToast()
+
+const formData = ref({
+  name: '',
+  immatriculation: '',
+  vehicle_model: '',
+  hours: 0,
+  price: 0
+})
+
+const handleSubmit = async () => {
+  try {
+    const user = authService.getUser()
+    if (!user?.garageId) {
+      throw new Error('Garage ID non trouvé')
+    }
+
+    const token = authService.getAccessToken()
+    if (!token) {
+      throw new Error('Non authentifié')
+    }
+
+    const response = await fetch('/api/tasks', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        ...formData.value,
+        garage_id: user.garageId
+      })
+    })
+
+    if (!response.ok) {
+      const data = await response.json()
+      throw new Error(data.message || 'Erreur lors de la création de la tâche')
+    }
+
+    formData.value = {
+      name: '',
+      immatriculation: '',
+      vehicle_model: '',
+      hours: 0,
+      price: 0
+    }
+
+    showToast('Tâche créée avec succès', 'success')
+  } catch (error: any) {
+    console.error('Erreur:', error)
+    showToast(error.message || 'Une erreur est survenue', 'error')
+  }
+}
+</script>
+
+<style scoped>
+.card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 420px;
+  overflow: hidden;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(var(--color-primary-rgb), 0.1);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.2);
+  backdrop-filter: blur(8px);
+}
+
+.icon-wrapper i {
+  font-size: 1rem;
+  color: var(--color-primary);
+}
+
+.card-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+  background: linear-gradient(
+    135deg,
+    var(--text-primary) 0%,
+    var(--text-primary) 30%,
+    var(--color-primary) 50%,
+    var(--text-primary) 70%,
+    var(--text-primary) 100%
+  );
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: shine 4s linear infinite;
+  letter-spacing: -0.02em;
+}
+
+@keyframes shine {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
+}
+
+.card-form {
+  padding: 1.25rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.span-full {
+  grid-column: 1 / -1;
+}
+
+.form-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.form-input {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 0.75rem;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.form-input:hover {
+  border-color: rgba(var(--color-primary-rgb), 0.3);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb), 0.05);
+}
+
+.button-primary {
+  width: 100%;
+  padding: 12px;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.button-primary i {
+  font-size: 14px;
+}
+
+.button-primary:hover {
+  background: var(--color-primary-hover);
+  transform: translateY(-1px);
+}
+
+.button-primary:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 480px) {
+  .card {
+    border-radius: 12px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card-header {
+    padding: 1rem;
+  }
+
+  .card-form {
+    padding: 1rem;
+  }
+}
+</style> 
