@@ -3,9 +3,9 @@
     <header class="header">
       <LogoText class="logo-text" />
       <div class="header-right">
-        <div class="user-badge" :class="{ 'is-admin': user?.role >= 2 }">
-          <i class="fas" :class="user?.role >= 2 ? 'fa-user-shield' : 'fa-user'"></i>
-          {{ user?.role >= 2 ? 'Administrateur' : 'Utilisateur' }}
+        <div class="user-badge" :class="{ 'is-admin': userRole >= 2 }">
+          <i class="fas" :class="userRole >= 2 ? 'fa-user-shield' : 'fa-user'"></i>
+          {{ userRole >= 2 ? 'Administrateur' : 'Utilisateur' }}
         </div>
         <button class="logout-button" @click="handleLogout">
           <i class="fas fa-sign-out-alt"></i>
@@ -20,14 +20,14 @@
     </div>
 
     <div class="cards-grid">
-      <TaskCard v-if="user?.role >= 1" />
+      <TaskCard v-if="userRole >= 1" />
       <!-- Autres cartes à venir en fonction du rôle -->
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import LogoText from './LogoText.vue'
 import TaskCard from './cards/TaskCard.vue'
@@ -36,6 +36,7 @@ import type { User } from '../types/auth'
 
 const router = useRouter()
 const user = ref<User | null>(null)
+const userRole = computed(() => user.value?.role ?? 0)
 
 onMounted(() => {
   user.value = authService.getUser()

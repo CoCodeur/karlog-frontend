@@ -24,7 +24,7 @@ const currentTime = ref(new Date().toLocaleTimeString())
 const isOnline = ref(navigator.onLine)
 const isNfcConnected = ref(false) // À connecter avec votre service NFC
 
-let timer: number
+let timer: ReturnType<typeof setInterval>
 
 const updateOnlineStatus = () => {
   isOnline.value = navigator.onLine

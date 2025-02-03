@@ -9,6 +9,27 @@
     
     <form @submit.prevent="handleSubmit" class="card-form">
       <div class="form-grid">
+        <div v-if="isAdmin" class="form-group span-full">
+          <label class="form-label">Garage</label>
+          <div class="select-wrapper">
+            <select
+              class="form-select"
+              v-model="selectedGarageId"
+              required
+            >
+              <option value="" disabled>Sélectionner un garage</option>
+              <option
+                v-for="garage in garages"
+                :key="garage.id"
+                :value="garage.id"
+              >
+                {{ garage.name }} - {{ garage.address.city }}
+              </option>
+            </select>
+            <i class="fas fa-chevron-down select-icon"></i>
+          </div>
+        </div>
+
         <div class="form-group span-full">
           <label class="form-label">Nom de la tâche</label>
           <input
@@ -79,11 +100,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import authService from '../../services/auth.service'
+import garageService from '../../services/garage.service'
 import { useToast } from '../../composables/useToast'
+import type { Garage } from '../../types/garage'
+import type { User } from '../../types/auth'
 
 const { show: showToast } = useToast()
+const user = ref<User | null>(authService.getUser())
+const garages = ref<Garage[]>([])
+const selectedGarageId = ref('')
+
+const isAdmin = computed(() => (user.value?.role ?? 0) >= 2)
 
 const formData = ref({
   name: '',
@@ -93,11 +122,17 @@ const formData = ref({
   price: 0
 })
 
+onMounted(() => {
+  garages.value = garageService.getGarages()
+  if (!isAdmin.value && user.value?.garageId) {
+    selectedGarageId.value = user.value.garageId
+  }
+})
+
 const handleSubmit = async () => {
   try {
-    const user = authService.getUser()
-    if (!user?.garageId) {
-      throw new Error('Garage ID non trouvé')
+    if (!user.value?.garageId && !selectedGarageId.value) {
+      throw new Error('Veuillez sélectionner un garage')
     }
 
     const token = authService.getAccessToken()
@@ -113,7 +148,7 @@ const handleSubmit = async () => {
       },
       body: JSON.stringify({
         ...formData.value,
-        garage_id: user.garageId
+        garage_id: isAdmin.value ? selectedGarageId.value : user.value?.garageId
       })
     })
 
@@ -298,5 +333,49 @@ const handleSubmit = async () => {
   .card-form {
     padding: 1rem;
   }
+}
+
+.select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.form-select {
+  width: 100%;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 0.75rem;
+  padding-right: 2.5rem;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.form-select:hover {
+  border-color: rgba(var(--color-primary-rgb), 0.3);
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb), 0.05);
+}
+
+.select-icon {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  pointer-events: none;
+  font-size: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.form-select:hover + .select-icon {
+  color: var(--color-primary);
 }
 </style> 
