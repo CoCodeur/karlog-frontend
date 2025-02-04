@@ -14,3 +14,15 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+interface Window {
+  electron: ElectronAPI
+  api: {
+    nfc: {
+      onReaderStatus: (callback: (connected: boolean) => void) => void
+      onCardDetected: (callback: (uuid: string) => void) => void
+      onCardRemoved: (callback: () => void) => void
+      checkReader: () => void
+    }
+  }
+}

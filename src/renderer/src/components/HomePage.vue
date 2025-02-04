@@ -14,15 +14,18 @@
       </div>
     </header>
 
-    <div class="welcome-text">
-      Bienvenue, {{ user?.first_name }} {{ user?.last_name }}
-      <div class="company-name">{{ formatCompanyName(user?.companyName) }}</div>
-    </div>
+    <ContentLayout>
+      <div class="welcome-text">
+        Bienvenue, {{ user?.first_name }} {{ user?.last_name }}
+        <div class="company-name">{{ formatCompanyName(user?.companyName) }}</div>
+      </div>
 
-    <div class="cards-grid">
-      <TaskCard v-if="userRole >= 1" />
-      <!-- Autres cartes à venir en fonction du rôle -->
-    </div>
+      <CardsGrid :columns="3" gap="lg">
+        <NFCCard />
+        <TaskCard v-if="userRole >= 1" />
+        <ActiveTasksCard v-if="userRole >= 1" />
+      </CardsGrid>
+    </ContentLayout>
   </div>
 </template>
 
@@ -31,6 +34,10 @@ import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import LogoText from './LogoText.vue'
 import TaskCard from './cards/TaskCard.vue'
+import ActiveTasksCard from './cards/ActiveTasksCard.vue'
+import NFCCard from './cards/NFCCard.vue'
+import ContentLayout from './layout/ContentLayout.vue'
+import CardsGrid from './layout/CardsGrid.vue'
 import authService from '../services/auth.service'
 import type { User } from '../types/auth'
 
@@ -61,18 +68,27 @@ const handleLogout = () => {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  gap: var(--spacing-lg);
+  padding-bottom: calc(var(--status-bar-height) + var(--spacing-md));
+  overflow-x: hidden;
 }
 
 .header {
+  position: sticky;
+  top: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  padding: 1rem 2rem;
+  padding: var(--spacing-md) var(--spacing-xl);
+  background: var(--bg-overlay-light);
+  backdrop-filter: blur(8px);
+  z-index: var(--z-header);
+  border-bottom: 1px solid var(--border-light);
 }
 
 .logo-text {
-  font-size: 42px;
+  font-size: var(--font-size-3xl);
   font-weight: 600;
   margin: 0;
 }
@@ -80,27 +96,27 @@ const handleLogout = () => {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: var(--spacing-md);
 }
 
 .user-badge {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 1.5rem;
-  border-radius: 20px;
-  font-size: 14px;
-  min-width: 160px;
-  height: 32px;
+  gap: var(--spacing-sm);
+  padding: calc(var(--spacing-sm) * 0.8) var(--spacing-lg);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+  min-width: 10rem;
+  height: 2rem;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-overlay-light);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-light);
   color: var(--text-secondary);
 }
 
 .user-badge i {
-  font-size: 14px;
+  font-size: var(--font-size-sm);
 }
 
 .user-badge.is-admin {
@@ -109,46 +125,38 @@ const handleLogout = () => {
 
 .welcome-text {
   text-align: center;
-  font-size: 32px;
+  font-size: var(--font-size-2xl);
   color: var(--text-primary);
-  margin: 2rem 0;
+  margin: 0;
   font-weight: 600;
+  padding: 0 var(--spacing-md);
 }
 
 .company-name {
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
   font-weight: 500;
   color: var(--color-primary);
-  margin-top: 0.75rem;
+  margin-top: var(--spacing-sm);
   opacity: 0.9;
   text-align: center;
   letter-spacing: 0.02em;
 }
 
-.cards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
-  padding: 2rem;
-  width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
 .logout-button {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 1rem;
-  height: 32px;
-  border-radius: 20px;
-  font-size: 14px;
-  background: rgba(255, 255, 255, 0.05);
+  gap: var(--spacing-sm);
+  padding: calc(var(--spacing-sm) * 0.8) var(--spacing-md);
+  height: 2rem;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+  background: var(--bg-overlay-light);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-light);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--transition-normal);
+  white-space: nowrap;
 }
 
 .logout-button:hover {
@@ -156,29 +164,47 @@ const handleLogout = () => {
   backdrop-filter: blur(12px);
   border-color: rgba(220, 53, 69, 0.3);
   color: rgb(220, 53, 69);
-  box-shadow: 0 0 20px rgba(220, 53, 69, 0.1);
+  box-shadow: var(--shadow-md);
 }
 
 .logout-button i {
-  font-size: 14px;
+  font-size: var(--font-size-sm);
 }
 
-@media (max-width: 640px) {
+@media (max-width: var(--breakpoint-sm)) {
+  .home-container {
+    gap: var(--spacing-md);
+    padding-bottom: calc(var(--status-bar-height) + var(--spacing-sm));
+  }
+
   .header {
     flex-direction: column;
-    gap: 1rem;
-    padding: 1rem;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
   }
 
   .header-right {
     width: 100%;
     justify-content: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
   }
 
-  .cards-grid {
-    grid-template-columns: 1fr;
-    padding: 1rem;
-    gap: 1rem;
+  .user-badge {
+    min-width: auto;
+    padding: calc(var(--spacing-sm) * 0.8) var(--spacing-md);
+  }
+
+  .welcome-text {
+    font-size: var(--font-size-xl);
+  }
+
+  .company-name {
+    font-size: var(--font-size-md);
+  }
+
+  .logo-text {
+    font-size: var(--font-size-2xl);
   }
 }
 </style> 

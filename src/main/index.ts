@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow, ipcMain, session } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { nfcManager } from './nfc'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -47,6 +48,9 @@ function createWindow(): void {
       })
     })
   }
+
+  // Set up NFC manager with the main window
+  nfcManager.setMainWindow(mainWindow)
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()

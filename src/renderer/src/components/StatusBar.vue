@@ -1,13 +1,26 @@
 <template>
   <div class="status-bar">
     <div class="status-content">
-      <div class="status-item" :class="{ 'is-connected': isOnline }">
-        <i class="fas" :class="isOnline ? 'fa-wifi' : 'fa-wifi-slash'"></i>
-        <span>{{ isOnline ? 'Connecté' : 'Hors ligne' }}</span>
+      <div class="status-item" :class="{ 'is-connected': isOnline, 'is-disconnected': !isOnline }">
+        <i
+          class="fas"
+          :class="[
+            isOnline ? 'fa-wifi' : 'fa-wifi-slash',
+            isOnline ? 'text-success' : 'text-error'
+          ]"
+        ></i>
+        <span :class="isOnline ? 'text-success' : 'text-error'">{{
+          isOnline ? 'Connecté' : 'Hors ligne'
+        }}</span>
       </div>
-      <div class="status-item" :class="{ 'is-connected': isNfcConnected }">
-        <i class="fas fa-credit-card"></i>
-        <span>{{ isNfcConnected ? 'Lecteur NFC connecté' : 'Lecteur NFC déconnecté' }}</span>
+      <div
+        class="status-item"
+        :class="{ 'is-connected': isConnected, 'is-disconnected': !isConnected }"
+      >
+        <i class="fas fa-wave-square" :class="isConnected ? 'text-success' : 'text-error'"></i>
+        <span :class="isConnected ? 'text-success' : 'text-error'">{{
+          isConnected ? 'Lecteur NFC connecté' : 'Lecteur NFC déconnecté'
+        }}</span>
       </div>
       <div class="status-item">
         <i class="fas fa-clock"></i>
@@ -18,11 +31,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import nfcService from '@renderer/services/nfc.service'
 
 const currentTime = ref(new Date().toLocaleTimeString())
 const isOnline = ref(navigator.onLine)
-const isNfcConnected = ref(false) // À connecter avec votre service NFC
+const isConnected = computed(() => nfcService.isConnected.value)
 
 let timer: ReturnType<typeof setInterval>
 
@@ -73,16 +87,27 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  opacity: 0.5;
+  opacity: 0.8;
   transition: all 0.3s ease;
 }
 
 .status-item.is-connected {
   opacity: 1;
-  color: var(--color-success, #4caf50);
+}
+
+.status-item.is-disconnected {
+  opacity: 1;
 }
 
 .status-item i {
   font-size: 12px;
 }
-</style> 
+
+.text-success {
+  color: var(--color-success) !important;
+}
+
+.text-error {
+  color: var(--color-error, #dc3545) !important;
+}
+</style>

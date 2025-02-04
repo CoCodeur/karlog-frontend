@@ -1,0 +1,54 @@
+:root {
+  /* Breakpoints */
+  --breakpoint-sm: 40rem;  /* 640px */
+  --breakpoint-md: 48rem;  /* 768px */
+  --breakpoint-lg: 64rem;  /* 1024px */
+  --breakpoint-xl: 80rem;  /* 1280px */
+
+  /* Spacing */
+  --spacing-xs: 0.25rem;   /* 4px */
+  --spacing-sm: 0.5rem;    /* 8px */
+  --spacing-md: 1rem;      /* 16px */
+  --spacing-lg: 1.5rem;    /* 24px */
+  --spacing-xl: 2rem;      /* 32px */
+
+  /* Layout */
+  --header-height: 4rem;
+  --status-bar-height: 2rem;
+  --card-min-width: 20rem;
+  --card-max-width: 26rem;
+  --container-max-width: 90rem;
+
+  /* Border radius */
+  --radius-sm: 0.625rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.25rem;
+
+  /* Font sizes */
+  --font-size-xs: 0.75rem;  /* 12px */
+  --font-size-sm: 0.875rem; /* 14px */
+  --font-size-md: 1rem;     /* 16px */
+  --font-size-lg: 1.25rem;  /* 20px */
+  --font-size-xl: 1.5rem;   /* 24px */
+  --font-size-2xl: 2rem;    /* 32px */
+  --font-size-3xl: 2.625rem;/* 42px */
+
+  /* Z-index */
+  --z-header: 10;
+  --z-status-bar: 1000;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s ease;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+
+  /* Colors */
+  --bg-overlay-light: rgba(255, 255, 255, 0.05);
+  --bg-overlay-medium: rgba(255, 255, 255, 0.1);
+  --border-light: rgba(255, 255, 255, 0.1);
+  --border-medium: rgba(255, 255, 255, 0.2);
+} 
