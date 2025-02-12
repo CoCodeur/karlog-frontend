@@ -29,8 +29,8 @@ class AuthService {
       this.setSession(response.data)
 
       // Fetch garages if user has a company
-      if (response.data.user.companyId) {
-        await garageService.fetchCompanyGarages(response.data.user.companyId)
+      if (response.data.user.company_id) {
+        await garageService.fetchCompanyGarages(response.data.user.company_id)
       }
 
       return response.data
@@ -84,7 +84,13 @@ class AuthService {
     const userStr = sessionStorage.getItem(this.storageKeys.USER)
     if (!userStr) return null
     try {
-      return JSON.parse(userStr) as User
+      const user = JSON.parse(userStr)
+      // S'assurer que les propriétés sont au bon format
+      return {
+        ...user,
+        company_id: user.company_id || user.companyId,
+        garage_id: user.garage_id || user.garageId
+      } as User
     } catch {
       return null
     }

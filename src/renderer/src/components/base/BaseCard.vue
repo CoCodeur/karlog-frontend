@@ -37,6 +37,7 @@ defineProps<{
   display: flex;
   flex-direction: column;
   overflow: hidden;
+
 }
 
 .card-header {

@@ -6,23 +6,15 @@
       </div>
       <h2 class="card-title">Nouvelle Tâche</h2>
     </div>
-    
-    <form @submit.prevent="handleSubmit" class="card-form">
+
+    <form class="card-form" @submit.prevent="handleSubmit">
       <div class="form-grid">
         <div v-if="isAdmin" class="form-group span-full">
           <label class="form-label">Garage</label>
           <div class="select-wrapper">
-            <select
-              class="form-select"
-              v-model="selectedGarageId"
-              required
-            >
+            <select v-model="selectedGarageId" class="form-select" required>
               <option value="" disabled>Sélectionner un garage</option>
-              <option
-                v-for="garage in garages"
-                :key="garage.id"
-                :value="garage.id"
-              >
+              <option v-for="garage in garages" :key="garage.id" :value="garage.id">
                 {{ garage.name }} - {{ garage.address.city }}
               </option>
             </select>
@@ -31,11 +23,22 @@
         </div>
 
         <div class="form-group span-full">
-          <label class="form-label">Nom de la tâche</label>
+          <label class="form-label">Numéro Horaire</label>
           <input
+            v-model="formData.schedule_number"
             class="form-input"
             type="text"
+            required
+            placeholder="ex: H2024-001"
+          />
+        </div>
+
+        <div class="form-group span-full">
+          <label class="form-label">Nom de la tâche</label>
+          <input
             v-model="formData.name"
+            class="form-input"
+            type="text"
             required
             placeholder="ex: Vidange"
           />
@@ -44,9 +47,9 @@
         <div class="form-group">
           <label class="form-label">Immatriculation</label>
           <input
+            v-model="formData.immatriculation"
             class="form-input"
             type="text"
-            v-model="formData.immatriculation"
             required
             placeholder="AB-123-CD"
             pattern="[A-Z]{2}-[0-9]{3}-[A-Z]{2}"
@@ -56,9 +59,9 @@
         <div class="form-group">
           <label class="form-label">Modèle du véhicule</label>
           <input
+            v-model="formData.vehicle_model"
             class="form-input"
             type="text"
-            v-model="formData.vehicle_model"
             required
             placeholder="ex: Renault Clio"
           />
@@ -67,9 +70,9 @@
         <div class="form-group">
           <label class="form-label">Temps estimé</label>
           <input
+            v-model="formData.hours"
             class="form-input"
             type="number"
-            v-model="formData.hours"
             required
             min="0"
             step="0.5"
@@ -80,9 +83,9 @@
         <div class="form-group">
           <label class="form-label">Prix</label>
           <input
+            v-model="formData.price"
             class="form-input"
             type="number"
-            v-model="formData.price"
             required
             min="0"
             step="0.01"
@@ -106,6 +109,9 @@ import garageService from '../../services/garage.service'
 import { useToast } from '../../composables/useToast'
 import type { Garage } from '../../types/garage'
 import type { User } from '../../types/auth'
+import { taskService } from '../../services/task.service'
+
+const emit = defineEmits(['taskCreated'])
 
 const { show: showToast } = useToast()
 const user = ref<User | null>(authService.getUser())
@@ -119,19 +125,20 @@ const formData = ref({
   immatriculation: '',
   vehicle_model: '',
   hours: 0,
-  price: 0
+  price: 0,
+  schedule_number: ''
 })
 
 onMounted(() => {
   garages.value = garageService.getGarages()
-  if (!isAdmin.value && user.value?.garageId) {
-    selectedGarageId.value = user.value.garageId
+  if (!isAdmin.value && user.value?.garage_id) {
+    selectedGarageId.value = user.value.garage_id
   }
 })
 
 const handleSubmit = async () => {
   try {
-    if (!user.value?.garageId && !selectedGarageId.value) {
+    if (!user.value?.garage_id && !selectedGarageId.value) {
       throw new Error('Veuillez sélectionner un garage')
     }
 
@@ -144,11 +151,11 @@ const handleSubmit = async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        Authorization: `Bearer ${token}`
       },
       body: JSON.stringify({
         ...formData.value,
-        garage_id: isAdmin.value ? selectedGarageId.value : user.value?.garageId
+        garage_id: isAdmin.value ? selectedGarageId.value : user.value?.garage_id
       })
     })
 
@@ -157,15 +164,24 @@ const handleSubmit = async () => {
       throw new Error(data.message || 'Erreur lors de la création de la tâche')
     }
 
+    const newTask = await response.json()
+
+    // Mettre à jour le cache des tâches actives
+    const currentTasks = taskService.getFromCache()
+    currentTasks.push(newTask)
+    taskService.saveToCache(currentTasks)
+
     formData.value = {
       name: '',
       immatriculation: '',
       vehicle_model: '',
       hours: 0,
-      price: 0
+      price: 0,
+      schedule_number: ''
     }
 
     showToast('Tâche créée avec succès', 'success')
+    emit('taskCreated')
   } catch (error: any) {
     console.error('Erreur:', error)
     showToast(error.message || 'Une erreur est survenue', 'error')
@@ -188,8 +204,8 @@ const handleSubmit = async () => {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 1.5rem;
-  margin-bottom: 0.5rem;
+  padding: 1.25rem;
+  margin-bottom: 0;
 }
 
 .icon-wrapper {
@@ -239,20 +255,20 @@ const handleSubmit = async () => {
 }
 
 .card-form {
-  padding: 1.25rem;
+  padding: 1rem 1.25rem 1.25rem;
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-  margin-bottom: 1.25rem;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
 .span-full {
@@ -265,11 +281,15 @@ const handleSubmit = async () => {
   color: var(--text-secondary);
 }
 
+.form-input, .form-select {
+  padding: 0.6rem 0.75rem;
+  height: 38px;
+}
+
 .form-input {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  padding: 0.75rem;
   color: var(--text-primary);
   font-size: 0.875rem;
   transition: all 0.2s ease;
@@ -323,14 +343,15 @@ const handleSubmit = async () => {
   }
 
   .form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .card-header {
-    padding: 1rem;
+    gap: 0.6rem;
+    margin-bottom: 0.75rem;
   }
 
   .card-form {
+    padding: 0.75rem 1rem 1rem;
+  }
+
+  .card-header {
     padding: 1rem;
   }
 }
@@ -338,6 +359,7 @@ const handleSubmit = async () => {
 .select-wrapper {
   position: relative;
   width: 100%;
+  height: 38px;
 }
 
 .form-select {
@@ -346,7 +368,7 @@ const handleSubmit = async () => {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  padding: 0.75rem;
+  padding: 0.6rem 0.75rem;
   padding-right: 2.5rem;
   color: var(--text-primary);
   font-size: 0.875rem;
@@ -378,4 +400,4 @@ const handleSubmit = async () => {
 .form-select:hover + .select-icon {
   color: var(--color-primary);
 }
-</style> 
+</style>

@@ -26,9 +26,9 @@ class GarageService {
     return GarageService.instance
   }
 
-  async fetchCompanyGarages(companyId: string): Promise<Garage[]> {
+  async fetchCompanyGarages(company_id: string): Promise<Garage[]> {
     try {
-      const response = await api.get(`/garages/company/${companyId}`)
+      const response = await api.get(`/garages/company/${company_id}`)
       this.garages = response.data.garages
       // Sauvegarder les garages dans le sessionStorage
       sessionStorage.setItem(this.storageKey, JSON.stringify(this.garages))

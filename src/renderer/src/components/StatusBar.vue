@@ -4,10 +4,7 @@
       <div class="status-item" :class="{ 'is-connected': isOnline, 'is-disconnected': !isOnline }">
         <i
           class="fas"
-          :class="[
-            isOnline ? 'fa-wifi' : 'fa-wifi-slash',
-            isOnline ? 'text-success' : 'text-error'
-          ]"
+          :class="isOnline ? ['fa-wifi', 'text-success'] : ['fa-wifi-slash', 'text-error']"
         ></i>
         <span :class="isOnline ? 'text-success' : 'text-error'">{{
           isOnline ? 'Connecté' : 'Hors ligne'
@@ -17,7 +14,10 @@
         class="status-item"
         :class="{ 'is-connected': isConnected, 'is-disconnected': !isConnected }"
       >
-        <i class="fas fa-wave-square" :class="isConnected ? 'text-success' : 'text-error'"></i>
+        <i
+          class="fa-regular fa-credit-card"
+          :style="{ color: isConnected ? '#98fb98' : '#ffb6b6' }"
+        ></i>
         <span :class="isConnected ? 'text-success' : 'text-error'">{{
           isConnected ? 'Lecteur NFC connecté' : 'Lecteur NFC déconnecté'
         }}</span>
@@ -104,10 +104,18 @@ onUnmounted(() => {
 }
 
 .text-success {
-  color: var(--color-success) !important;
+  color: #98fb98 !important; /* Pastel green */
 }
 
 .text-error {
-  color: var(--color-error, #dc3545) !important;
+  color: #ffb6b6 !important; /* Pastel red */
+}
+
+.nfc-icon.nfc-connected {
+  color: #98fb98 !important; /* Pastel green */
+}
+
+.nfc-icon.nfc-disconnected {
+  color: #ffb6b6 !important; /* Pastel red */
 }
 </style>

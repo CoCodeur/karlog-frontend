@@ -1,27 +1,44 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
-import { useAuthStore } from '@renderer/stores/auth'
-import { UserRole } from '@renderer/types/auth'
-import { taskService } from '@renderer/services/task.service'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import type { Task } from '@renderer/types/task'
+import { taskService } from '@renderer/services/task.service'
 import { useToast } from '@renderer/composables/useToast'
 
-const authStore = useAuthStore()
 const { show: showToast } = useToast()
 
 const tasks = ref<Task[]>([])
 const selectedTask = ref<Task | null>(null)
 const isModalOpen = ref(false)
 const loading = ref(false)
+const searchQuery = ref('')
+
+const filteredTasks = computed(() => {
+  const query = searchQuery.value.toLowerCase()
+  const sorted = [...tasks.value].sort((a, b) => {
+    // Trier d'abord par nombre de travailleurs actifs (décroissant)
+    const workersA = a.activeWorkers.length
+    const workersB = b.activeWorkers.length
+    if (workersA !== workersB) {
+      return workersB - workersA
+    }
+    // Puis par numéro horaire
+    return (a.schedule_number || '').localeCompare(b.schedule_number || '')
+  })
+
+  if (!query) return sorted
+
+  return sorted.filter(task => 
+    (task.schedule_number || '').toLowerCase().includes(query) ||
+    task.name.toLowerCase().includes(query) ||
+    task.vehicle_model.toLowerCase().includes(query) ||
+    task.immatriculation.toLowerCase().includes(query)
+  )
+})
 
 const fetchTasks = async () => {
   try {
     loading.value = true
-    if (authStore.userRole >= UserRole.ADMINISTRATOR) {
-      tasks.value = await taskService.getCompanyActiveTasks(authStore.companyId)
-    } else {
-      tasks.value = await taskService.getGarageActiveTasks(authStore.garageId)
-    }
+    tasks.value = await taskService.getActiveTasks()
   } catch (error) {
     showToast('Erreur lors du chargement des tâches', 'error')
   } finally {
@@ -69,11 +86,18 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeyDown)
 })
+
+// Exposer la méthode pour qu'elle soit accessible depuis l'extérieur
+defineExpose({
+  fetchTasks
+})
 </script>
 
 <template>
   <div class="card">
-    <div class="card-content" @click="tasks.length > 0 && openTaskDetails(tasks[0])">
+    <div class="card-content" 
+      :class="{ 'has-tasks': tasks.length > 0 }"
+      @click="tasks.length > 0 && openTaskDetails(tasks[0])">
       <div class="card-header">
         <div class="icon-wrapper">
           <i class="fas fa-tasks"></i>
@@ -95,10 +119,9 @@ onBeforeUnmount(() => {
     </div>
   </div>
 
-  <!-- Modal -->
-  <div v-if="isModalOpen" class="modal modal-open" @click="closeModal">
-    <div class="modal-content" @click.stop>
-      <div class="modal-card">
+  <Teleport to="body">
+    <div v-if="isModalOpen" class="modal-overlay" @click="closeModal">
+      <div class="modal-wrapper" @click.stop>
         <div class="modal-header">
           <div class="icon-wrapper">
             <i class="fas fa-tasks"></i>
@@ -106,53 +129,66 @@ onBeforeUnmount(() => {
           <h2 class="modal-title">Tâches Actives</h2>
         </div>
 
-        <div class="table-container">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Tâche</th>
-                <th>Véhicule</th>
-                <th>Immatriculation</th>
-                <th>Prix</th>
-                <th>Durée</th>
-                <th>Travailleurs</th>
-                <th class="text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="task in tasks" :key="task.id" class="hover">
-                <td class="font-medium">{{ task.name }}</td>
-                <td>{{ task.vehicle_model }}</td>
-                <td>{{ task.immatriculation }}</td>
-                <td class="text-violet-500 font-medium">{{ task.price }}€</td>
-                <td>{{ task.hours }}h</td>
-                <td>
-                  <div v-if="task.activeWorkers.length === 0" class="text-gray-500">
-                    Aucun travailleur
-                  </div>
-                  <div v-else class="workers-list">
-                    <div v-for="worker in task.activeWorkers" :key="worker.id" class="worker-item">
-                      <i class="fas fa-user text-violet-500 mr-2"></i>
-                      {{ worker.firstName }} {{ worker.lastName }}
-                      <span class="text-sm text-gray-500">
-                        (depuis {{ new Date(worker.startDate).toLocaleString() }})
-                      </span>
+        <div class="search-bar">
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Rechercher par numéro horaire, nom, véhicule ou immatriculation..."
+            class="search-input"
+          />
+        </div>
+
+        <div class="modal-body">
+          <div class="table-wrapper">
+            <table class="tasks-table">
+              <thead>
+                <tr>
+                  <th>Numéro Horaire</th>
+                  <th>Tâche</th>
+                  <th>Véhicule</th>
+                  <th>Immatriculation</th>
+                  <th>Prix</th>
+                  <th>Durée</th>
+                  <th>Travailleurs</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="task in filteredTasks" :key="task.id">
+                  <td>{{ task.schedule_number }}</td>
+                  <td>{{ task.name }}</td>
+                  <td>{{ task.vehicle_model }}</td>
+                  <td>{{ task.immatriculation }}</td>
+                  <td>{{ task.price }}€</td>
+                  <td>{{ task.hours }}h</td>
+                  <td>
+                    <div v-if="task.activeWorkers.length === 0" class="no-workers">
+                      Aucun travailleur
                     </div>
-                  </div>
-                </td>
-                <td class="text-center">
-                  <button @click="completeTask(task.id)" class="modal-button">
-                    <i class="fas fa-check mr-2"></i>
-                    Terminer
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                    <div v-else class="workers-list">
+                      <div v-for="worker in task.activeWorkers" :key="worker.id" class="worker-item">
+                        <i class="fas fa-user"></i>
+                        {{ worker.firstName }} {{ worker.lastName }}
+                        <span class="worker-time">
+                          (depuis {{ new Date(worker.startDate).toLocaleString() }})
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <button class="complete-btn" @click="completeTask(task.id)">
+                      <i class="fas fa-check"></i>
+                      Terminer
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -174,12 +210,20 @@ onBeforeUnmount(() => {
 
 .card-content {
   height: 100%;
-  cursor: pointer;
+  cursor: default;
   transition: all 0.3s ease;
-}
 
-.card-content:hover {
-  transform: translateY(-2px);
+  &:hover {
+    transform: none;
+  }
+
+  &[class*="has-tasks"] {
+    cursor: pointer;
+
+    &:hover {
+      transform: translateY(-2px);
+    }
+  }
 }
 
 .card-header {
@@ -267,121 +311,96 @@ onBeforeUnmount(() => {
   padding: 2rem;
 }
 
-/* Modal styles */
-.modal {
+.modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 50;
-  padding: 1rem;
+  z-index: 1000;
 }
 
-.modal-content {
-  width: 95%;
-  height: 95vh;
-  position: relative;
-}
-
-.modal-card {
-  height: 100%;
-  background: rgba(30, 30, 30, 0.7);
-  backdrop-filter: blur(12px);
+.modal-wrapper {
+  width: 90%;
+  max-width: 1400px;
+  height: 85vh;
+  background: var(--bg-primary);
+  border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 24px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
 }
 
 .modal-header {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 2rem;
+  padding: 1.5rem 2rem;
+  background: rgba(255, 255, 255, 0.02);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .modal-title {
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   font-weight: 600;
-  margin: 0;
-  background: linear-gradient(
-    135deg,
-    var(--text-primary) 0%,
-    var(--text-primary) 30%,
-    var(--color-primary) 50%,
-    var(--text-primary) 70%,
-    var(--text-primary) 100%
-  );
-  background-size: 200% auto;
-  color: transparent;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: shine 4s linear infinite;
-  letter-spacing: -0.02em;
+  color: var(--text-primary);
 }
 
-.table-container {
+.modal-body {
   flex: 1;
-  overflow: auto;
-  padding: 0 2rem 2rem;
-  margin-top: 1rem;
+  overflow: hidden;
+  padding: 1.5rem 2rem;
 }
 
-.table {
+.table-wrapper {
+  height: 100%;
+  overflow: auto;
+}
+
+.tasks-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  min-width: 800px;
+  font-size: 0.9rem;
 }
 
-.table th {
+.tasks-table th {
+  position: sticky;
+  top: 0;
   background: rgba(var(--color-primary-rgb), 0.1);
   color: var(--text-primary);
   font-weight: 600;
   text-align: left;
   padding: 1rem;
-  white-space: nowrap;
-  border-top: 1px solid rgba(var(--color-primary-rgb), 0.2);
   border-bottom: 1px solid rgba(var(--color-primary-rgb), 0.2);
-  position: sticky;
-  top: 0;
-  backdrop-filter: blur(12px);
 }
 
-.table th:first-child {
-  border-top-left-radius: 12px;
-  border-left: 1px solid rgba(var(--color-primary-rgb), 0.2);
-}
-
-.table th:last-child {
-  border-top-right-radius: 12px;
-  border-right: 1px solid rgba(var(--color-primary-rgb), 0.2);
-}
-
-.table td {
+.tasks-table td {
   padding: 1rem;
-  border-bottom: 1px solid rgba(var(--color-primary-rgb), 0.1);
-  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+  white-space: nowrap;
 }
 
-.table tr:last-child td:first-child {
-  border-bottom-left-radius: 12px;
+.tasks-table td:first-child {
+  font-family: monospace;
+  font-size: 0.95rem;
+  color: var(--color-primary);
 }
 
-.table tr:last-child td:last-child {
-  border-bottom-right-radius: 12px;
+.tasks-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
 }
 
-.table tr.hover:hover td {
-  background: rgba(var(--color-primary-rgb), 0.05);
+.no-workers {
+  color: var(--text-secondary);
+  font-style: italic;
 }
 
 .workers-list {
@@ -391,88 +410,91 @@ onBeforeUnmount(() => {
 }
 
 .worker-item {
-  font-size: 14px;
   display: flex;
   align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
 }
 
-.modal-button {
+.worker-item i {
+  color: var(--color-primary);
+}
+
+.worker-time {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.complete-btn {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: 0.5rem;
-  padding: 0.5rem 1.25rem;
-  font-size: 0.875rem;
-  font-weight: 500;
+  padding: 0.5rem 1rem;
+  background: var(--color-primary);
   color: white;
-  background: rgb(139, 92, 246);
   border: none;
   border-radius: 8px;
+  font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 10px rgba(139, 92, 246, 0.3);
 }
 
-.modal-button:hover {
-  background: rgb(124, 58, 237);
+.complete-btn:hover {
+  background: var(--color-primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
 }
 
-.modal-button:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+.search-bar {
+  padding: 1rem 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
 }
 
-/* Responsive adjustments */
+.search-input {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  display: block;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb), 0.1);
+}
+
+.search-input::placeholder {
+  color: var(--text-secondary);
+}
+
 @media (max-width: 768px) {
-  .modal {
-    padding: 0.5rem;
-  }
-
-  .modal-content {
+  .modal-wrapper {
     width: 100%;
-    height: 98vh;
+    height: 100vh;
+    border-radius: 0;
   }
 
   .modal-header {
-    padding: 1.5rem;
+    padding: 1rem 1.5rem;
   }
 
-  .table-container {
-    padding: 0 1rem 1rem;
+  .modal-body {
+    padding: 1rem 1.5rem;
   }
 
-  .modal-title {
-    font-size: 1.5rem;
+  .search-bar {
+    padding: 0.75rem 1.5rem;
   }
 
-  .table td,
-  .table th {
-    padding: 0.75rem;
-  }
-}
-
-@media (max-width: 640px) {
-  .card-content {
-    padding: 1rem;
-  }
-
-  .icon-wrapper {
-    width: 32px;
-    height: 32px;
-  }
-
-  .icon-wrapper i {
-    font-size: 0.875rem;
-  }
-
-  .card-title {
-    font-size: 1.25rem;
-  }
-
-  .task-count {
-    font-size: 36px;
+  .search-input {
+    padding: 0.6rem 1rem;
   }
 }
 </style>

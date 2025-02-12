@@ -48,7 +48,7 @@ class NFCManager {
       })
 
       // Événement déclenché lorsqu'une carte est retirée
-      reader.on('card.off', card => {
+      reader.on('card.off', () => {
         console.log('Card removed')
         this.mainWindow?.webContents.send('nfc:card-removed')
       })

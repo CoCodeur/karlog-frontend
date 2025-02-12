@@ -79,7 +79,7 @@ body {
   border: var(--glass-morph-border);
   box-shadow: var(--glass-morph-box-shadow);
   border-radius: 16px;
-  position: relative;
+  position: relative;  
   overflow: hidden;
 }
 

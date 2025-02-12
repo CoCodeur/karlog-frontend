@@ -1,8 +1,9 @@
-import { ref, watchEffect } from 'vue'
+import { ref } from 'vue'
 
 class NFCService {
   private isConnectedRef = ref(false)
   private lastCardUUID = ref<string | null>(null)
+  private checkReaderInterval: NodeJS.Timeout | null = null
 
   constructor() {
     this.initNFCDetection()
@@ -15,6 +16,10 @@ class NFCService {
         return
       }
 
+      // Nettoyage des anciens listeners potentiels
+      this.cleanup()
+
+      // Écoute des changements d'état du lecteur
       window.api.nfc.onReaderStatus((connected: boolean) => {
         console.log('Reader status changed:', connected)
         this.isConnectedRef.value = connected
@@ -33,16 +38,30 @@ class NFCService {
         this.lastCardUUID.value = null
       })
 
-      // Vérification périodique de l'état du lecteur
-      setInterval(() => {
+      // Vérification initiale et périodique de l'état du lecteur
+      const checkReader = () => {
+        console.log('Checking reader status...')
         window.api.nfc.checkReader()
-      }, 1000)
+      }
 
-      // Vérification initiale
-      window.api.nfc.checkReader()
+      // Vérification immédiate au démarrage
+      checkReader()
+
+      // Vérification périodique
+      this.checkReaderInterval = setInterval(checkReader, 1000)
     } catch (error) {
-      console.error('Erreur lors de l\'initialisation NFC:', error)
+      console.error("Erreur lors de l'initialisation NFC:", error)
     }
+  }
+
+  private cleanup() {
+    if (this.checkReaderInterval) {
+      clearInterval(this.checkReaderInterval)
+      this.checkReaderInterval = null
+    }
+    // Réinitialisation des états
+    this.isConnectedRef.value = false
+    this.lastCardUUID.value = null
   }
 
   public get isConnected() {
@@ -56,6 +75,10 @@ class NFCService {
   public resetCardUUID() {
     this.lastCardUUID.value = null
   }
+
+  public dispose() {
+    this.cleanup()
+  }
 }
 
-export default new NFCService() 
+export default new NFCService()
