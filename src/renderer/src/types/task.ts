@@ -3,6 +3,10 @@ export interface TaskRecord {
   user_id: string;
   start_date: string;
   end_date: string | null;
+  user?: {
+    first_name: string;
+    last_name: string;
+  };
 }
 
 export interface ActiveWorker {
@@ -22,7 +26,8 @@ export interface Task {
   price: number;
   status: number;
   schedule_number: string;
-  activeWorkers: ActiveWorker[];
+  task_records: TaskRecord[];
+  activeWorkers?: ActiveWorker[];
 }
 
 export interface APITask {
@@ -40,5 +45,5 @@ export interface APITask {
 
 export interface APIResponse {
   message: string;
-  task: APITask;
+  task: Task;
 } 

@@ -16,8 +16,8 @@ const filteredTasks = computed(() => {
   const query = searchQuery.value.toLowerCase()
   const sorted = [...tasks.value].sort((a, b) => {
     // Trier d'abord par nombre de travailleurs actifs (décroissant)
-    const workersA = a.activeWorkers.length
-    const workersB = b.activeWorkers.length
+    const workersA = a.task_records?.filter(record => !record.end_date)?.length || 0
+    const workersB = b.task_records?.filter(record => !record.end_date)?.length || 0
     if (workersA !== workersB) {
       return workersB - workersA
     }
@@ -37,16 +37,22 @@ const filteredTasks = computed(() => {
 
 const fetchTasks = async () => {
   try {
+    console.log('Début du fetchTasks dans ActiveTasksCard')
     loading.value = true
-    tasks.value = await taskService.getActiveTasks()
+    const fetchedTasks = await taskService.getActiveTasks()
+    console.log('Tâches récupérées dans ActiveTasksCard:', fetchedTasks)
+    tasks.value = fetchedTasks
   } catch (error) {
+    console.error('Erreur lors du chargement des tâches:', error)
     showToast('Erreur lors du chargement des tâches', 'error')
   } finally {
     loading.value = false
+    console.log('Fin du fetchTasks dans ActiveTasksCard')
   }
 }
 
 const openTaskDetails = (task: Task) => {
+  console.log('Ouverture des détails de la tâche:', task)
   selectedTask.value = task
   isModalOpen.value = true
 }
@@ -65,9 +71,9 @@ const handleKeyDown = (event: KeyboardEvent) => {
 const completeTask = async (taskId: string) => {
   try {
     await taskService.completeTask(taskId)
-    showToast('Tâche terminée avec succès', 'success')
-    // Rafraîchir la liste des tâches
+    // Rafraîchir les tâches depuis l'API
     await fetchTasks()
+    showToast('Tâche terminée avec succès', 'success')
 
     // Si plus aucune tâche, fermer le modal
     if (tasks.value.length === 0) {
@@ -78,8 +84,9 @@ const completeTask = async (taskId: string) => {
   }
 }
 
-onMounted(() => {
-  fetchTasks()
+onMounted(async () => {
+  console.log('ActiveTasksCard monté, appel de fetchTasks')
+  await fetchTasks()
   window.addEventListener('keydown', handleKeyDown)
 })
 
@@ -95,25 +102,24 @@ defineExpose({
 
 <template>
   <div class="card">
-    <div class="card-content" 
-      :class="{ 'has-tasks': tasks.length > 0 }"
-      @click="tasks.length > 0 && openTaskDetails(tasks[0])">
-      <div class="card-header">
-        <div class="icon-wrapper">
-          <i class="fas fa-tasks"></i>
-        </div>
-        <h2 class="card-title">Tâches Actives</h2>
+    <div class="card-header">
+      <div class="icon-wrapper">
+        <i class="fas fa-tasks"></i>
       </div>
+      <h2 class="card-title">Tâches Actives</h2>
+      <p class="task-count">{{ filteredTasks.length }} tâche(s)</p>
+    </div>
 
+    <div class="card-content" @click="openTaskDetails(filteredTasks[0])">
       <div v-if="loading" class="loading-container">
         <span class="loading loading-spinner loading-lg"></span>
       </div>
-      <div v-else-if="tasks.length === 0" class="empty-state">
+      <div v-else-if="filteredTasks.length === 0" class="empty-state">
         <i class="fas fa-clipboard-list"></i>
         <p>Aucune tâche active</p>
       </div>
       <div v-else class="task-preview">
-        <div class="task-count">{{ tasks.length }}</div>
+        <div class="task-count-large">{{ filteredTasks.length }}</div>
         <p class="task-label">tâches en cours</p>
       </div>
     </div>
@@ -123,10 +129,15 @@ defineExpose({
     <div v-if="isModalOpen" class="modal-overlay" @click="closeModal">
       <div class="modal-wrapper" @click.stop>
         <div class="modal-header">
-          <div class="icon-wrapper">
-            <i class="fas fa-tasks"></i>
+          <div class="modal-title">
+            <h2>Tâches Actives</h2>
+            <p>{{ filteredTasks.length }} tâche(s)</p>
           </div>
-          <h2 class="modal-title">Tâches Actives</h2>
+          <div class="modal-actions">
+            <button class="close-btn" @click="closeModal">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
         </div>
 
         <div class="search-bar">
@@ -139,8 +150,11 @@ defineExpose({
         </div>
 
         <div class="modal-body">
-          <div class="table-wrapper">
-            <table class="tasks-table">
+          <div v-if="loading" class="loading-container">
+            <span class="loading loading-spinner loading-lg"></span>
+          </div>
+          <div v-else class="table-container">
+            <table>
               <thead>
                 <tr>
                   <th>Numéro Horaire</th>
@@ -155,28 +169,28 @@ defineExpose({
               </thead>
               <tbody>
                 <tr v-for="task in filteredTasks" :key="task.id">
-                  <td>{{ task.schedule_number }}</td>
+                  <td class="schedule-number">{{ task.schedule_number }}</td>
                   <td>{{ task.name }}</td>
                   <td>{{ task.vehicle_model }}</td>
                   <td>{{ task.immatriculation }}</td>
                   <td>{{ task.price }}€</td>
                   <td>{{ task.hours }}h</td>
                   <td>
-                    <div v-if="task.activeWorkers.length === 0" class="no-workers">
+                    <div v-if="!task.task_records || task.task_records.every(record => record.end_date)" class="no-workers">
                       Aucun travailleur
                     </div>
                     <div v-else class="workers-list">
-                      <div v-for="worker in task.activeWorkers" :key="worker.id" class="worker-item">
+                      <div v-for="record in task.task_records.filter(r => !r.end_date)" :key="record._id" class="worker-item">
                         <i class="fas fa-user"></i>
-                        {{ worker.firstName }} {{ worker.lastName }}
+                        {{ record.user?.first_name }} {{ record.user?.last_name }}
                         <span class="worker-time">
-                          (depuis {{ new Date(worker.startDate).toLocaleString() }})
+                          (depuis {{ new Date(record.start_date).toLocaleString() }})
                         </span>
                       </div>
                     </div>
                   </td>
                   <td>
-                    <button class="complete-btn" @click="completeTask(task.id)">
+                    <button class="action-btn complete-btn" @click="completeTask(task.id)">
                       <i class="fas fa-check"></i>
                       Terminer
                     </button>
@@ -206,24 +220,9 @@ defineExpose({
   width: 100%;
   max-width: 420px;
   overflow: hidden;
-}
-
-.card-content {
-  height: 100%;
-  cursor: default;
-  transition: all 0.3s ease;
-
-  &:hover {
-    transform: none;
-  }
-
-  &[class*="has-tasks"] {
-    cursor: pointer;
-
-    &:hover {
-      transform: translateY(-2px);
-    }
-  }
+  height: 600px;
+  display: flex;
+  flex-direction: column;
 }
 
 .card-header {
@@ -231,7 +230,8 @@ defineExpose({
   align-items: center;
   gap: 1rem;
   padding: 1.5rem;
-  margin-bottom: 0.5rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .icon-wrapper {
@@ -271,23 +271,48 @@ defineExpose({
   letter-spacing: -0.02em;
 }
 
+.task-count {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.card-content {
+  flex: 1;
+  padding: 2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: transparent;
+}
+
+.card-content:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
 .task-preview {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  padding: 1.25rem;
+  gap: 1rem;
+  padding: 2rem;
+  text-align: center;
 }
 
-.task-count {
-  font-size: 48px;
+.task-count-large {
+  font-size: 72px;
   font-weight: 600;
   color: var(--color-primary);
+  line-height: 1;
 }
 
 .task-label {
   color: var(--text-secondary);
-  font-size: 16px;
+  font-size: 1.1rem;
+  opacity: 0.8;
 }
 
 .empty-state {
@@ -340,16 +365,51 @@ defineExpose({
 .modal-header {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  justify-content: space-between;
   padding: 1.5rem 2rem;
   background: rgba(255, 255, 255, 0.02);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .modal-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.modal-title h2 {
   font-size: 1.5rem;
   font-weight: 600;
+  margin: 0;
+}
+
+.modal-title p {
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  background: transparent;
   color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .modal-body {
@@ -358,43 +418,42 @@ defineExpose({
   padding: 1.5rem 2rem;
 }
 
-.table-wrapper {
+.table-container {
   height: 100%;
   overflow: auto;
 }
 
-.tasks-table {
+table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
   font-size: 0.9rem;
 }
 
-.tasks-table th {
+thead {
   position: sticky;
   top: 0;
+  z-index: 1;
   background: rgba(var(--color-primary-rgb), 0.1);
-  color: var(--text-primary);
-  font-weight: 600;
+}
+
+th {
   text-align: left;
   padding: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: rgba(var(--color-primary-rgb), 0.1);
   border-bottom: 1px solid rgba(var(--color-primary-rgb), 0.2);
 }
 
-.tasks-table td {
+td {
   padding: 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   color: var(--text-primary);
   white-space: nowrap;
 }
 
-.tasks-table td:first-child {
-  font-family: monospace;
-  font-size: 0.95rem;
-  color: var(--color-primary);
-}
-
-.tasks-table tr:hover td {
+tr:hover td {
   background: rgba(255, 255, 255, 0.02);
 }
 
@@ -425,18 +484,26 @@ defineExpose({
   font-size: 0.8rem;
 }
 
-.complete-btn {
+.action-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background: var(--color-primary);
-  color: white;
-  border: none;
   border-radius: 8px;
   font-size: 0.9rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  white-space: nowrap;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.complete-btn {
+  background: var(--color-primary);
+  border: none;
+  color: white;
 }
 
 .complete-btn:hover {
@@ -496,5 +563,10 @@ defineExpose({
   .search-input {
     padding: 0.6rem 1rem;
   }
+}
+
+.schedule-number {
+  color: rgb(147, 51, 234);
+  font-weight: 500;
 }
 </style>

@@ -17,7 +17,7 @@
           <i class="fas fa-users"></i>
           <span>Utilisateurs</span>
         </button>
-        <button class="admin-btn">
+        <button class="admin-btn" @click="showGaragesCard = true">
           <i class="fas fa-building"></i>
           <span>Garages</span>
         </button>
@@ -32,15 +32,18 @@
   </div>
 
   <UsersCard v-if="showUsersCard" :is-modal-open="showUsersCard" @close="showUsersCard = false" />
+  <GaragesCard v-if="showGaragesCard" :is-modal-open="showGaragesCard" @close="showGaragesCard = false" />
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import authService from '../../services/auth.service'
 import UsersCard from './UsersCard.vue'
+import GaragesCard from './GaragesCard.vue'
 
 const userRole = computed(() => authService.getUser()?.role ?? 0)
 const showUsersCard = ref(false)
+const showGaragesCard = ref(false)
 </script>
 
 <style scoped>

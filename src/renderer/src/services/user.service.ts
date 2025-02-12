@@ -1,6 +1,17 @@
 import { UserRole, type User } from '../types/auth'
 import authService from './auth.service'
 
+interface NewUser {
+  first_name: string
+  last_name: string
+  email: string
+  password: string
+  role: number
+  company_id?: string
+  is_service_account?: boolean
+  card_uid?: string | null
+}
+
 class UserService {
   private readonly CACHE_KEY = 'users_cache'
 
@@ -157,6 +168,28 @@ class UserService {
         user.role != UserRole.SUPER_ADMINISTRATOR &&
         !user.card_uid
     )
+  }
+
+  async createUser(userData: NewUser): Promise<User> {
+    const token = authService.getAccessToken()
+    if (!token) throw new Error('Non authentifié')
+
+    const response = await fetch('/api/users', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(userData)
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.message || "Erreur lors de la création de l'utilisateur")
+    }
+
+    const data = await response.json()
+    return data.user // Retourner l'utilisateur de la réponse
   }
 }
 

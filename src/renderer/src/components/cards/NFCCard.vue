@@ -152,6 +152,10 @@ const showTaskModal = ref(false)
 const availableTasks = ref<Task[]>([])
 const selectedTaskId = ref('')
 
+const emit = defineEmits<{
+  (e: 'taskUpdated'): void
+}>()
+
 const loadUnassignedUsers = async () => {
   try {
     unassignedUsers.value = await userService.getUnassignedUsers()
@@ -273,24 +277,39 @@ const startTask = async () => {
     const updatedTask = await taskService.startTask(selectedTaskId.value, lastUser.value.id)
 
     // Vérifier si la tâche a des travailleurs actifs
-    const userRecord = updatedTask.activeWorkers.find((w) => w.userId === lastUser.value?.id)
+    const userRecord = updatedTask.task_records?.find(
+      (record) => record.user_id === lastUser.value?.id && !record.end_date
+    )
     if (!userRecord) {
       throw new Error('Erreur lors du démarrage de la tâche: aucun travailleur actif trouvé')
     }
 
-    console.log('Record trouvé:', userRecord)
-    activeTask.value = updatedTask
-    activeTaskRecord.value = userRecord.id
+    // Mettre à jour le cache des tâches
+    await taskService.fetchTasks()
+    availableTasks.value = await taskService.getActiveTasks()
 
-    // Mettre à jour l'utilisateur local avec les nouveaux IDs
+    // Mettre à jour l'utilisateur actif
+    activeTask.value = updatedTask
+    activeTaskRecord.value = userRecord._id
+
+    // Mettre à jour l'utilisateur local avec les informations de l'utilisateur
+    if (lastUser.value) {
+      userRecord.user = {
+        first_name: lastUser.value.first_name,
+        last_name: lastUser.value.last_name
+      }
+    }
+
     lastUser.value = {
       ...lastUser.value,
       task_id: updatedTask.id,
-      record_task_id: userRecord.id
+      record_task_id: userRecord._id
     }
 
     showToast('Tâche démarrée avec succès', 'success')
     closeTaskModal()
+    console.log('Émission de l\'événement taskUpdated')
+    emit('taskUpdated')
   } catch (error) {
     console.error('Erreur:', error)
     showToast('Erreur lors du démarrage de la tâche', 'error')
@@ -317,6 +336,10 @@ const stopTask = async () => {
 
     await taskService.stopTask(lastUser.value.task_id, lastUser.value.record_task_id)
 
+    // Mettre à jour le cache des tâches
+    await taskService.fetchTasks()
+    availableTasks.value = await taskService.getActiveTasks()
+
     // Réinitialiser l'état
     activeTask.value = null
     activeTaskRecord.value = null
@@ -329,6 +352,8 @@ const stopTask = async () => {
     }
 
     showToast('Tâche terminée avec succès', 'success')
+    console.log('Émission de l\'événement taskUpdated après arrêt')
+    emit('taskUpdated')
   } catch (error) {
     console.error('Erreur:', error)
     showToast("Erreur lors de l'arrêt de la tâche", 'error')

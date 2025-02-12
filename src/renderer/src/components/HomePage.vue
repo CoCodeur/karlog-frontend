@@ -21,7 +21,7 @@
       </div>
 
       <div class="cards-container">
-        <NFCCard />
+        <NFCCard @task-updated="refreshTasks" />
         <TaskCard v-if="userRole >= 1" @task-created="refreshTasks" />
         <ActiveTasksCard v-if="userRole >= 1" ref="activeTasksCard" />
         <AdminCard v-if="userRole >= 1" />
@@ -49,7 +49,7 @@ const router = useRouter()
 const user = ref<User | null>(null)
 const company = ref<Company | null>(null)
 const userRole = computed(() => user.value?.role ?? 0)
-const activeTasksCard = ref<typeof ActiveTasksCard | null>(null)
+const activeTasksCard = ref<InstanceType<typeof ActiveTasksCard> | null>(null)
 
 onMounted(async () => {
   user.value = authService.getUser()
@@ -73,6 +73,7 @@ const handleLogout = () => {
 }
 
 const refreshTasks = async () => {
+  console.log('Rafraîchissement des tâches...', activeTasksCard.value)
   if (activeTasksCard.value) {
     await activeTasksCard.value.fetchTasks()
   }

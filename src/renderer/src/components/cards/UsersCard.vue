@@ -50,13 +50,23 @@
                     </span>
                   </td>
                   <td class="action-cell">
-                    <button v-if="user.card_uid" class="action-btn dissociate-btn" @click="dissociateCard(user)">
+                    <button
+                      v-if="user.card_uid"
+                      class="action-btn dissociate-btn"
+                      @click="dissociateCard(user)"
+                    >
                       <i class="fas fa-unlink"></i>
                       Dissocier
                     </button>
                   </td>
                   <td class="action-cell">
-                    <button class="action-btn delete-btn" @click="deleteUser(user)">
+                    <button 
+                      class="action-btn delete-btn" 
+                      @click="deleteUser(user)"
+                      :disabled="user.role === UserRole.SERVICE_ACCOUNT"
+                      :class="{ 'disabled': user.role === UserRole.SERVICE_ACCOUNT }"
+                      :title="user.role === UserRole.SERVICE_ACCOUNT ? 'Les comptes de service ne peuvent pas être supprimés' : ''"
+                    >
                       <i class="fas fa-trash"></i>
                       Supprimer
                     </button>
@@ -72,7 +82,11 @@
 
   <!-- Modal de création d'utilisateur -->
   <Teleport to="body">
-    <div v-if="showCreateModal" class="modal-overlay create-modal-overlay" @click="closeCreateModal">
+    <div
+      v-if="showCreateModal"
+      class="modal-overlay create-modal-overlay"
+      @click="closeCreateModal"
+    >
       <div class="modal-content create-user-modal" @click.stop>
         <div class="create-modal-header">
           <div class="create-modal-title">
@@ -84,20 +98,32 @@
           </button>
         </div>
         <div class="create-modal-body">
-          <form @submit.prevent="createUser" class="create-user-form">
+          <form class="create-user-form" @submit.prevent="createUser">
             <div class="form-row">
               <div class="form-group">
                 <label>Prénom</label>
                 <div class="input-wrapper">
                   <i class="fas fa-user"></i>
-                  <input v-model="newUser.first_name" type="text" required @input="generateEmail" placeholder="John" />
+                  <input
+                    v-model="newUser.first_name"
+                    type="text"
+                    required
+                    placeholder="John"
+                    @input="updateEmail"
+                  />
                 </div>
               </div>
               <div class="form-group">
                 <label>Nom</label>
                 <div class="input-wrapper">
                   <i class="fas fa-user"></i>
-                  <input v-model="newUser.last_name" type="text" required @input="generateEmail" placeholder="Doe" />
+                  <input
+                    v-model="newUser.last_name"
+                    type="text"
+                    required
+                    placeholder="Doe"
+                    @input="updateEmail"
+                  />
                 </div>
               </div>
             </div>
@@ -108,7 +134,6 @@
                 <i class="fas fa-shield-alt"></i>
                 <select v-model="newUser.role" required>
                   <option :value="0">Utilisateur</option>
-                  <option :value="1">Compte de service</option>
                   <option v-if="userRole >= 2" :value="2">Administrateur</option>
                 </select>
               </div>
@@ -119,14 +144,24 @@
                 <label>Email</label>
                 <div class="input-wrapper">
                   <i class="fas fa-envelope"></i>
-                  <input v-model="newUser.email" type="email" required placeholder="admin@example.com" />
+                  <input
+                    v-model="newUser.email"
+                    type="email"
+                    required
+                    placeholder="admin@example.com"
+                  />
                 </div>
               </div>
               <div class="form-group">
                 <label>Mot de passe</label>
                 <div class="input-wrapper">
                   <i class="fas fa-lock"></i>
-                  <input v-model="newUser.password" type="password" required placeholder="••••••••" />
+                  <input
+                    v-model="newUser.password"
+                    type="password"
+                    required
+                    placeholder="••••••••"
+                  />
                 </div>
               </div>
             </template>
@@ -170,9 +205,19 @@ const loading = ref(false)
 const users = ref<User[]>([])
 const showCreateModal = ref(false)
 const userRole = computed(() => authService.getUser()?.role ?? 0)
-const currentUser = computed(() => authService.getUser())
 
-const newUser = ref({
+interface NewUser {
+  first_name: string
+  last_name: string
+  email: string
+  password: string
+  role: number
+  company_id?: string
+  is_service_account?: boolean
+  card_uid?: string | null
+}
+
+const newUser = ref<NewUser>({
   first_name: '',
   last_name: '',
   email: '',
@@ -181,7 +226,13 @@ const newUser = ref({
 })
 
 const filteredUsers = computed(() => {
-  return users.value.filter(user => user.role === UserRole.USER)
+  if (userRole.value >= UserRole.ADMINISTRATOR) {
+    // Pour les administrateurs, montrer les utilisateurs normaux et les comptes de service
+    return users.value.filter((user) => user.role <= UserRole.SERVICE_ACCOUNT)
+  } else {
+    // Pour les autres, montrer uniquement les utilisateurs normaux
+    return users.value.filter((user) => user.role === UserRole.USER)
+  }
 })
 
 const getRoleName = (role: UserRole): string => {
@@ -210,12 +261,7 @@ const fetchUsers = async () => {
   }
 }
 
-const openModal = () => {
-  // isModalOpen.value = true
-}
-
 const closeModal = () => {
-  // isModalOpen.value = false
   emit('close')
 }
 
@@ -234,52 +280,81 @@ const closeCreateModal = () => {
   }
 }
 
-const generateEmail = () => {
-  if (newUser.value.first_name && newUser.value.last_name && currentUser.value?.company_name) {
-    const firstName = newUser.value.first_name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    const lastName = newUser.value.last_name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    newUser.value.email = `${firstName}.${lastName}@${currentUser.value.company_name.toLowerCase()}.com`
+// Fonction utilitaire pour normaliser une chaîne (enlever les accents, mettre en minuscule)
+const normalizeString = (str: string): string => {
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+}
+
+const generateEmail = (): string | null => {
+  const { first_name, last_name } = newUser.value
+  const user = authService.getUser()
+  
+  if (!first_name || !last_name || !user?.company_name) {
+    return null
+  }
+
+  const normalizedFirstName = normalizeString(first_name)
+  const normalizedLastName = normalizeString(last_name)
+  const normalizedCompanyName = normalizeString(user.company_name)
+
+  return `${normalizedFirstName}.${normalizedLastName}@${normalizedCompanyName}.com`
+}
+
+const updateEmail = () => {
+  if (newUser.value.role < 2) { // Seulement pour les non-administrateurs
+    const email = generateEmail()
+    if (email) {
+      newUser.value.email = email
+    }
+  }
+}
+
+const prepareUserData = (): NewUser => {
+  const currentUser = authService.getUser()
+  if (!currentUser?.company_id) {
+    throw new Error('Non authentifié')
+  }
+
+  // Générer l'email pour les non-administrateurs
+  if (newUser.value.role < 2) {
+    const email = generateEmail()
+    if (!email) {
+      throw new Error('Impossible de générer l\'email')
+    }
+    newUser.value.email = email
+  }
+
+  return {
+    first_name: newUser.value.first_name,
+    last_name: newUser.value.last_name,
+    email: newUser.value.email,
+    password: newUser.value.role >= 2 ? newUser.value.password : uuidv4(),
+    role: newUser.value.role,
+    company_id: currentUser.company_id,
+    is_service_account: newUser.value.role === UserRole.SERVICE_ACCOUNT,
+    card_uid: null
   }
 }
 
 const createUser = async () => {
   try {
-    const token = authService.getAccessToken()
-    const currentUser = authService.getUser()
-    if (!token || !currentUser?.company_id) throw new Error('Non authentifié')
-
-    const userData = {
-      ...newUser.value,
-      company_id: currentUser.company_id,
-      is_service_account: newUser.value.role === UserRole.SERVICE_ACCOUNT,
-      card_uid: null
-    }
-
-    // Si ce n'est pas un admin, on génère un mot de passe aléatoire
-    if (newUser.value.role < 2) {
-      userData.password = uuidv4()
-    }
-
-    const response = await fetch('/api/users', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(userData)
-    })
-
-    if (!response.ok) {
-      throw new Error("Erreur lors de la création de l'utilisateur")
-    }
-
-    const createdUser = await response.json()
-    users.value.push(createdUser)
+    const userData = prepareUserData()
+    const response = await userService.createUser(userData)
+    
+    // Mettre à jour la liste des utilisateurs et le cache
+    const updatedUsers = [...users.value, response]
+    users.value = updatedUsers
+    userService.saveToCache(updatedUsers)
+    
     showToast('Utilisateur créé avec succès', 'success')
     closeCreateModal()
   } catch (error) {
     console.error('Erreur:', error)
-    showToast("Erreur lors de la création de l'utilisateur", 'error')
+    const message = error instanceof Error ? error.message : "Erreur lors de la création de l'utilisateur"
+    showToast(message, 'error')
   }
 }
 
@@ -309,7 +384,7 @@ const deleteUser = async (user: User) => {
       throw new Error("Erreur lors de la suppression de l'utilisateur")
     }
 
-    users.value = users.value.filter(u => u.id !== user.id)
+    users.value = users.value.filter((u) => u.id !== user.id)
     userService.saveToCache(users.value) // Mettre à jour le cache
     showToast('Utilisateur supprimé avec succès', 'success')
   } catch (error) {
@@ -318,11 +393,14 @@ const deleteUser = async (user: User) => {
   }
 }
 
-watch(() => props.isModalOpen, (newValue) => {
-  if (newValue) {
-    fetchUsers()
+watch(
+  () => props.isModalOpen,
+  (newValue) => {
+    if (newValue) {
+      fetchUsers()
+    }
   }
-})
+)
 
 onMounted(() => {
   if (props.isModalOpen) {
@@ -530,7 +608,7 @@ tr:hover td {
   background: rgba(147, 51, 234, 0.2);
   border: 1px solid rgba(147, 51, 234, 0.3);
   color: rgb(216, 180, 254);
-  box-shadow: 
+  box-shadow:
     0 4px 6px -1px rgba(147, 51, 234, 0.1),
     0 2px 4px -1px rgba(147, 51, 234, 0.06);
 }
@@ -538,7 +616,7 @@ tr:hover td {
 .dissociate-btn:hover {
   background: rgba(147, 51, 234, 0.3);
   border-color: rgba(147, 51, 234, 0.4);
-  box-shadow: 
+  box-shadow:
     0 10px 15px -3px rgba(147, 51, 234, 0.2),
     0 4px 6px -2px rgba(147, 51, 234, 0.1),
     0 0 0 1px rgba(147, 51, 234, 0.2) inset;
@@ -548,7 +626,7 @@ tr:hover td {
   background: rgba(239, 68, 68, 0.2);
   border: 1px solid rgba(239, 68, 68, 0.3);
   color: rgb(252, 165, 165);
-  box-shadow: 
+  box-shadow:
     0 4px 6px -1px rgba(239, 68, 68, 0.1),
     0 2px 4px -1px rgba(239, 68, 68, 0.06);
 }
@@ -556,14 +634,14 @@ tr:hover td {
 .delete-btn:hover {
   background: rgba(239, 68, 68, 0.3);
   border-color: rgba(239, 68, 68, 0.4);
-  box-shadow: 
+  box-shadow:
     0 10px 15px -3px rgba(239, 68, 68, 0.2),
     0 4px 6px -2px rgba(239, 68, 68, 0.1),
     0 0 0 1px rgba(239, 68, 68, 0.2) inset;
 }
 
 .create-modal-overlay {
-  background: rgba(0, 0, 0, 0.85);
+  z-index: 1001;
 }
 
 .modal-content.create-user-modal {
@@ -572,7 +650,7 @@ tr:hover td {
   background: var(--bg-primary);
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 
+  box-shadow:
     0 20px 25px -5px rgba(0, 0, 0, 0.2),
     0 10px 10px -5px rgba(0, 0, 0, 0.1);
   overflow: hidden;
@@ -677,7 +755,7 @@ tr:hover td {
   outline: none;
   border-color: var(--color-primary);
   background: rgba(var(--color-primary-rgb), 0.1);
-  box-shadow: 
+  box-shadow:
     0 0 0 2px rgba(var(--color-primary-rgb), 0.2),
     0 2px 4px -1px rgba(0, 0, 0, 0.1);
 }
@@ -719,7 +797,7 @@ tr:hover td {
   background: var(--color-primary);
   border: none;
   color: white;
-  box-shadow: 
+  box-shadow:
     0 4px 6px -1px rgba(var(--color-primary-rgb), 0.2),
     0 2px 4px -1px rgba(var(--color-primary-rgb), 0.1);
 }
@@ -727,7 +805,7 @@ tr:hover td {
 .confirm-btn:hover {
   background: var(--color-primary-hover);
   transform: translateY(-1px);
-  box-shadow: 
+  box-shadow:
     0 10px 15px -3px rgba(var(--color-primary-rgb), 0.3),
     0 4px 6px -2px rgba(var(--color-primary-rgb), 0.15);
 }
@@ -756,7 +834,8 @@ tr:hover td {
     padding: 1rem 1.5rem;
   }
 
-  th, td {
+  th,
+  td {
     padding: 1rem 1.5rem;
   }
 
@@ -764,4 +843,22 @@ tr:hover td {
     flex-direction: column;
   }
 }
-</style> 
+
+:deep(.toast-container) {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 9999;
+}
+
+.action-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.action-btn.disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+</style>

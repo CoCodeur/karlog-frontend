@@ -12,6 +12,7 @@ export interface User {
   first_name: string
   last_name: string
   company_id: string
+  company_name: string
   garage_id: string | null
   is_service_account: boolean
   card_uid: string | null

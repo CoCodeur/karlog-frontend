@@ -10,4 +10,26 @@ export interface Garage {
   name: string
   address: Address
   company_id: string
+}
+
+export interface NewGarage {
+  name: string
+  address: Address
+  company_id: string
+  service_account_password: string
+}
+
+export interface UpdateGarage {
+  name?: string
+  address?: Address
+}
+
+export interface ServiceAccount {
+  email: string
+}
+
+export interface GarageCreateResponse {
+  message: string
+  garage: Garage
+  service_account: ServiceAccount
 } 

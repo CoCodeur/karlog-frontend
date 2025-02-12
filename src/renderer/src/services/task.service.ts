@@ -1,10 +1,9 @@
 import type { Task, APIResponse } from '@renderer/types/task'
 import authService from './auth.service'
-import { UserRole } from '@renderer/types/auth'
 import { userService } from './user.service'
 
 class TaskService {
-  private readonly CACHE_KEY = 'tasks_cache'
+  private readonly CACHE_KEY = 'active_tasks_cache'
 
   public saveToCache(tasks: Task[]) {
     localStorage.setItem(this.CACHE_KEY, JSON.stringify(tasks))
@@ -15,6 +14,24 @@ class TaskService {
     return cached ? JSON.parse(cached) : []
   }
 
+  public updateTaskInCache(task: Task) {
+    const tasks = this.getFromCache()
+    const taskIndex = tasks.findIndex(t => t.id === task.id)
+    
+    if (taskIndex !== -1) {
+      tasks[taskIndex] = task
+    } else {
+      tasks.push(task)
+    }
+
+    this.saveToCache(tasks)
+    return task
+  }
+
+  public clearCache(): void {
+    localStorage.removeItem(this.CACHE_KEY)
+  }
+
   async fetchTasks(): Promise<Task[]> {
     try {
       const token = authService.getAccessToken()
@@ -22,7 +39,7 @@ class TaskService {
       if (!token || !user) throw new Error('Non authentifié')
 
       let endpoint: string
-      if (user.role >= UserRole.ADMINISTRATOR) {
+      if (user.role >= 2) {
         if (!user.company_id) throw new Error('company_id manquant')
         endpoint = `/api/tasks/company/${user.company_id}/active`
       } else {
@@ -57,14 +74,6 @@ class TaskService {
     return cachedTasks
   }
 
-  async refreshTasks(): Promise<void> {
-    await this.fetchTasks()
-  }
-
-  clearCache(): void {
-    localStorage.removeItem(this.CACHE_KEY)
-  }
-
   async completeTask(taskId: string): Promise<Task> {
     try {
       const token = authService.getAccessToken()
@@ -83,17 +92,10 @@ class TaskService {
         throw new Error('Erreur lors de la terminaison de la tâche')
       }
 
-      const updatedTask = await response.json()
-
-      // Mettre à jour le cache
-      const tasks = this.getFromCache()
-      const taskIndex = tasks.findIndex((t) => t.id === taskId)
-      if (taskIndex !== -1) {
-        tasks[taskIndex] = updatedTask
-        this.saveToCache(tasks)
-      }
-
-      return updatedTask
+      const data = await response.json()
+      const tasks = this.getFromCache().filter(task => task.id !== taskId)
+      this.saveToCache(tasks)
+      return data.task
     } catch (error) {
       console.error('Erreur:', error)
       throw error
@@ -121,66 +123,16 @@ class TaskService {
         throw new Error(error.message || 'Erreur lors du démarrage de la tâche')
       }
 
-      const data = (await response.json()) as APIResponse
-      console.log('Réponse API startTask:', data)
+      const data = await response.json()
+      this.updateTaskInCache(data.task)
+      
+      // Mettre à jour l'utilisateur dans le cache
+      userService.updateUserInCache(userId, {
+        task_id: taskId,
+        record_task_id: data.task.task_records[data.task.task_records.length - 1]._id
+      })
 
-      // Récupérer les informations de l'utilisateur
-      const users = userService.getFromCache()
-      const user = users.find(u => u.id === userId)
-      if (!user) {
-        throw new Error('Utilisateur non trouvé dans le cache')
-      }
-
-      // Transformer la structure de la tâche
-      const task = data.task
-      const activeWorkers = task.task_records
-        .filter((record) => record.end_date === null)
-        .map((record) => {
-          const worker = users.find(u => u.id === record.user_id)
-          return {
-            id: record._id,
-            userId: record.user_id,
-            startDate: record.start_date,
-            firstName: worker?.first_name || '',
-            lastName: worker?.last_name || ''
-          }
-        })
-
-      const transformedTask: Task = {
-        id: task.id,
-        name: task.name,
-        immatriculation: task.immatriculation,
-        vehicle_model: task.vehicle_model,
-        hours: task.hours,
-        price: task.price,
-        status: task.status,
-        schedule_number: task.schedule_number,
-        activeWorkers: activeWorkers
-      }
-
-      console.log('Tâche transformée:', transformedTask)
-
-      // Mettre à jour le cache des tâches
-      const tasks = this.getFromCache()
-      const taskIndex = tasks.findIndex((t) => t.id === taskId)
-      if (taskIndex !== -1) {
-        tasks[taskIndex] = transformedTask
-      } else {
-        tasks.push(transformedTask)
-      }
-
-      this.saveToCache(tasks)
-
-      // Mettre à jour l'utilisateur dans le cache avec les nouveaux IDs
-      const userRecord = activeWorkers.find((w) => w.userId === userId)
-      if (userRecord) {
-        userService.updateUserInCache(userId, {
-          task_id: taskId,
-          record_task_id: userRecord.id
-        })
-      }
-
-      return transformedTask
+      return data.task
     } catch (error) {
       console.error('Erreur:', error)
       throw error
@@ -204,47 +156,10 @@ class TaskService {
       }
 
       const data = await response.json()
-      console.log('Réponse API stopTask:', data)
-
-      // Récupérer les informations des utilisateurs
-      const users = userService.getFromCache()
-
-      // Transformer la structure de la tâche
-      const task = data.task
-      const activeWorkers = task.task_records
-        .filter((record) => record.end_date === null)
-        .map((record) => {
-          const worker = users.find(u => u.id === record.user_id)
-          return {
-            id: record._id,
-            userId: record.user_id,
-            startDate: record.start_date,
-            firstName: worker?.first_name || '',
-            lastName: worker?.last_name || ''
-          }
-        })
-
-      const transformedTask: Task = {
-        id: task.id,
-        name: task.name,
-        immatriculation: task.immatriculation,
-        vehicle_model: task.vehicle_model,
-        hours: task.hours,
-        price: task.price,
-        status: task.status,
-        schedule_number: task.schedule_number,
-        activeWorkers: activeWorkers
-      }
-
-      // Mettre à jour le cache des tâches
-      const tasks = this.getFromCache()
-      const taskIndex = tasks.findIndex((t) => t.id === taskId)
-      if (taskIndex !== -1) {
-        tasks[taskIndex] = transformedTask
-        this.saveToCache(tasks)
-      }
+      this.updateTaskInCache(data.task)
 
       // Réinitialiser les IDs de tâche de l'utilisateur dans le cache
+      const users = userService.getFromCache()
       const userIndex = users.findIndex(
         (u) => u.task_id === taskId && u.record_task_id === recordId
       )
@@ -255,7 +170,7 @@ class TaskService {
         })
       }
 
-      return transformedTask
+      return data.task
     } catch (error) {
       console.error('Erreur:', error)
       throw error

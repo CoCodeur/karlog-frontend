@@ -130,10 +130,19 @@ const formData = ref({
 })
 
 onMounted(() => {
-  garages.value = garageService.getGarages()
-  if (!isAdmin.value && user.value?.garage_id) {
-    selectedGarageId.value = user.value.garage_id
+  // Charger les garages au montage
+  const loadGarages = async () => {
+    try {
+      garages.value = await garageService.getGarages()
+      if (!isAdmin.value && user.value?.garage_id) {
+        selectedGarageId.value = user.value.garage_id
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des garages:', error)
+      showToast('Erreur lors du chargement des garages', 'error')
+    }
   }
+  loadGarages()
 })
 
 const handleSubmit = async () => {
@@ -164,12 +173,9 @@ const handleSubmit = async () => {
       throw new Error(data.message || 'Erreur lors de la création de la tâche')
     }
 
-    const newTask = await response.json()
-
-    // Mettre à jour le cache des tâches actives
-    const currentTasks = taskService.getFromCache()
-    currentTasks.push(newTask)
-    taskService.saveToCache(currentTasks)
+    const data = await response.json()
+    // Mettre à jour le cache avec la nouvelle tâche
+    taskService.updateTaskInCache(data.task)
 
     formData.value = {
       name: '',
@@ -181,6 +187,7 @@ const handleSubmit = async () => {
     }
 
     showToast('Tâche créée avec succès', 'success')
+    // Émettre l'événement après la mise à jour du cache
     emit('taskCreated')
   } catch (error: any) {
     console.error('Erreur:', error)
