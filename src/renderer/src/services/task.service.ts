@@ -1,4 +1,4 @@
-import type { Task, APIResponse } from '@renderer/types/task'
+import type { Task } from '@renderer/types/task'
 import authService from './auth.service'
 import { userService } from './user.service'
 
@@ -170,6 +170,47 @@ class TaskService {
         })
       }
 
+      return data.task
+    } catch (error) {
+      console.error('Erreur:', error)
+      throw error
+    }
+  }
+
+  async cancelTask(taskId: string): Promise<Task> {
+    try {
+      const token = authService.getAccessToken()
+      if (!token) throw new Error('Non authentifié')
+
+      // Récupérer la tâche pour avoir les records actifs
+      const task = this.getFromCache().find(t => t.id === taskId)
+      if (!task) throw new Error('Tâche non trouvée')
+
+      // Arrêter tous les records actifs
+      if (task.task_records && task.task_records.length > 0) {
+        const activeRecords = task.task_records.filter(record => !record.end_date)
+        for (const record of activeRecords) {
+          await this.stopTask(taskId, record._id)
+        }
+      }
+
+      // Changer le statut de la tâche
+      const response = await fetch(`/api/tasks/${taskId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: -1 })
+      })
+
+      if (!response.ok) {
+        throw new Error("Erreur lors de l'annulation de la tâche")
+      }
+
+      const data = await response.json()
+      const tasks = this.getFromCache().filter(t => t.id !== taskId)
+      this.saveToCache(tasks)
       return data.task
     } catch (error) {
       console.error('Erreur:', error)

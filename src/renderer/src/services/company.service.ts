@@ -25,7 +25,7 @@ class CompanyService {
     return CompanyService.instance
   }
 
-  async fetchCompany(company_id: string): Promise<Company> {
+  async fetchCompany(company_id: string): Promise<Company | null> {
     try {
       const response = await api.get(`/companies/${company_id}`)
       this.company = response.data.company

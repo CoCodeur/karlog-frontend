@@ -84,6 +84,22 @@ const completeTask = async (taskId: string) => {
   }
 }
 
+const cancelTask = async (taskId: string) => {
+  try {
+    await taskService.cancelTask(taskId)
+    // Rafraîchir les tâches depuis l'API
+    await fetchTasks()
+    showToast('Tâche annulée avec succès', 'success')
+
+    // Si plus aucune tâche, fermer le modal
+    if (tasks.value.length === 0) {
+      closeModal()
+    }
+  } catch (error) {
+    showToast("Erreur lors de l'annulation de la tâche", 'error')
+  }
+}
+
 onMounted(async () => {
   console.log('ActiveTasksCard monté, appel de fetchTasks')
   await fetchTasks()
@@ -190,10 +206,16 @@ defineExpose({
                     </div>
                   </td>
                   <td>
-                    <button class="action-btn complete-btn" @click="completeTask(task.id)">
-                      <i class="fas fa-check"></i>
-                      Terminer
-                    </button>
+                    <div class="action-buttons">
+                      <button class="action-btn complete-btn" @click="completeTask(task.id)">
+                        <i class="fas fa-check"></i>
+                        Terminer
+                      </button>
+                      <button class="action-btn cancel-btn" @click="cancelTask(task.id)">
+                        <i class="fas fa-times"></i>
+                        Annuler
+                      </button>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -484,6 +506,11 @@ tr:hover td {
   font-size: 0.8rem;
 }
 
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .action-btn {
   display: inline-flex;
   align-items: center;
@@ -508,6 +535,17 @@ tr:hover td {
 
 .complete-btn:hover {
   background: var(--color-primary-hover);
+  transform: translateY(-1px);
+}
+
+.cancel-btn {
+  background: rgb(220, 38, 38);
+  border: none;
+  color: white;
+}
+
+.cancel-btn:hover {
+  background: rgb(185, 28, 28);
   transform: translateY(-1px);
 }
 

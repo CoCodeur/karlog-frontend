@@ -81,7 +81,7 @@ class GarageService {
     }
   }
 
-  async getGarages(): Promise<Garage[]> {
+  async getGaragess(): Promise<Garage[]> {
     const cachedGarages = this.getFromCache()
     if (cachedGarages.length === 0) {
       return this.fetchGarages()
