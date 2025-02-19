@@ -27,6 +27,7 @@
     "@serialport/parser-readline": "^13.0.0",
     "@vueuse/core": "^12.4.0",
     "axios": "^1.7.9",
+    "chart.js": "^4.4.7",
     "electron-updater": "^6.1.7",
     "lucide-vue-next": "^0.471.0",
     "nfc-pcsc": "^0.8.1",

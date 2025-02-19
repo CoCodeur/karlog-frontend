@@ -16,8 +16,8 @@ const filteredTasks = computed(() => {
   const query = searchQuery.value.toLowerCase()
   const sorted = [...tasks.value].sort((a, b) => {
     // Trier d'abord par nombre de travailleurs actifs (décroissant)
-    const workersA = a.task_records?.filter(record => !record.end_date)?.length || 0
-    const workersB = b.task_records?.filter(record => !record.end_date)?.length || 0
+    const workersA = a.task_records?.filter((record) => !record.end_date)?.length || 0
+    const workersB = b.task_records?.filter((record) => !record.end_date)?.length || 0
     if (workersA !== workersB) {
       return workersB - workersA
     }
@@ -27,11 +27,12 @@ const filteredTasks = computed(() => {
 
   if (!query) return sorted
 
-  return sorted.filter(task => 
-    (task.schedule_number || '').toLowerCase().includes(query) ||
-    task.name.toLowerCase().includes(query) ||
-    task.vehicle_model.toLowerCase().includes(query) ||
-    task.immatriculation.toLowerCase().includes(query)
+  return sorted.filter(
+    (task) =>
+      (task.schedule_number || '').toLowerCase().includes(query) ||
+      task.name.toLowerCase().includes(query) ||
+      task.vehicle_model.toLowerCase().includes(query) ||
+      task.immatriculation.toLowerCase().includes(query)
   )
 })
 
@@ -192,11 +193,20 @@ defineExpose({
                   <td>{{ task.price }}€</td>
                   <td>{{ task.hours }}h</td>
                   <td>
-                    <div v-if="!task.task_records || task.task_records.every(record => record.end_date)" class="no-workers">
+                    <div
+                      v-if="
+                        !task.task_records || task.task_records.every((record) => record.end_date)
+                      "
+                      class="no-workers"
+                    >
                       Aucun travailleur
                     </div>
                     <div v-else class="workers-list">
-                      <div v-for="record in task.task_records.filter(r => !r.end_date)" :key="record._id" class="worker-item">
+                      <div
+                        v-for="record in task.task_records.filter((r) => !r.end_date)"
+                        :key="record._id"
+                        class="worker-item"
+                      >
                         <i class="fas fa-user"></i>
                         {{ record.user?.first_name }} {{ record.user?.last_name }}
                         <span class="worker-time">

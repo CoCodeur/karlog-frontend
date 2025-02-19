@@ -9,7 +9,7 @@
 
     <div class="admin-buttons">
       <template v-if="userRole >= 2">
-        <button class="admin-btn">
+        <button class="admin-btn" @click="showDashboardCard = true">
           <i class="fas fa-chart-pie"></i>
           <span>Tableau de bord</span>
         </button>
@@ -31,6 +31,7 @@
     </div>
   </div>
 
+  <DashboardCard v-if="showDashboardCard" :is-modal-open="showDashboardCard" @close="showDashboardCard = false" />
   <UsersCard v-if="showUsersCard" :is-modal-open="showUsersCard" @close="showUsersCard = false" />
   <GaragesCard v-if="showGaragesCard" :is-modal-open="showGaragesCard" @close="showGaragesCard = false" />
 </template>
@@ -40,10 +41,12 @@ import { computed, ref } from 'vue'
 import authService from '../../services/auth.service'
 import UsersCard from './UsersCard.vue'
 import GaragesCard from './GaragesCard.vue'
+import DashboardCard from './DashboardCard.vue'
 
 const userRole = computed(() => authService.getUser()?.role ?? 0)
 const showUsersCard = ref(false)
 const showGaragesCard = ref(false)
+const showDashboardCard = ref(false)
 </script>
 
 <style scoped>
