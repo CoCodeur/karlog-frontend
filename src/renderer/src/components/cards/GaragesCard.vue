@@ -5,11 +5,7 @@
       <div class="modal-wrapper" @click.stop>
         <div class="toast-container">
           <TransitionGroup name="toast">
-            <div
-              v-for="toast in toasts"
-              :key="toast.id"
-              :class="['toast', toast.type]"
-            >
+            <div v-for="toast in toasts" :key="toast.id" :class="['toast', toast.type]">
               {{ toast.message }}
             </div>
           </TransitionGroup>
@@ -40,6 +36,7 @@
                 <tr>
                   <th>Nom</th>
                   <th>Adresse</th>
+                  <th>Email du compte de service</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -47,6 +44,7 @@
                 <tr v-for="garage in garages" :key="garage.id">
                   <td>{{ garage.name }}</td>
                   <td>{{ formatAddress(garage.address) }}</td>
+                  <td>{{ garage.service_account_email || '-' }}</td>
                   <td class="action-cell">
                     <div class="action-buttons">
                       <button class="action-btn edit-btn" @click="openEditGarageModal(garage)">
@@ -160,8 +158,8 @@
                   <button
                     type="button"
                     class="toggle-password-btn"
-                    @click="showPassword = !showPassword"
                     :title="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+                    @click="showPassword = !showPassword"
                   >
                     <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
                   </button>
@@ -187,7 +185,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import garageService from '../../services/garage.service'
 import authService from '../../services/auth.service'
 import type { Garage, Address } from '../../types/garage'
@@ -236,14 +234,17 @@ const showLocalToast = (message: string, type: 'success' | 'error') => {
   const id = toastId++
   toasts.value.push({ id, message, type })
   setTimeout(() => {
-    toasts.value = toasts.value.filter(t => t.id !== id)
+    toasts.value = toasts.value.filter((t) => t.id !== id)
   }, 10000)
 }
 
 const fetchGarages = async () => {
   loading.value = true
   try {
-    garages.value = await garageService.getGarages()
+    // Forcer le rechargement depuis le serveur
+    const currentUser = authService.getUser()
+    if (!currentUser?.company_id) throw new Error('Non authentifié')
+    garages.value = await garageService.fetchCompanyGarages(currentUser.company_id)
   } catch (error) {
     showLocalToast('Erreur lors du chargement des garages', 'error')
   } finally {
@@ -301,40 +302,36 @@ const submitGarage = async () => {
     if (!currentUser?.company_id) throw new Error('Non authentifié')
 
     if (isEditing.value && selectedGarage.value) {
-      // Modification - on n'envoie que les champs name et address
-      const updatedGarage = await garageService.updateGarage(selectedGarage.value.id, {
+      // Modification
+      await garageService.updateGarage(selectedGarage.value.id, {
         name: garageForm.value.name,
         address: garageForm.value.address
       })
-      
-      const index = garages.value.findIndex(g => g.id === selectedGarage.value?.id)
-      if (index !== -1) {
-        garages.value[index] = updatedGarage
-      }
-      
+
+      // Mettre à jour la liste des garages
+      garages.value = garageService.getGarages()
       showLocalToast('Garage modifié avec succès', 'success')
     } else {
-      // Création - on inclut le service_account_password
+      // Création
       const response = await garageService.createGarage({
         name: garageForm.value.name,
         address: garageForm.value.address,
         company_id: currentUser.company_id,
         service_account_password: garageForm.value.service_account_password || ''
       })
-      
-      garages.value.push(response.garage)
+
+      // Mettre à jour la liste des garages
+      garages.value = garageService.getGarages()
       showLocalToast(
         `Garage créé avec succès. Email du compte de service : ${response.service_account.email}`,
         'success'
       )
     }
 
-    // Mettre à jour le cache
-    garageService.saveToCache(garages.value)
     closeGarageModal()
   } catch (error) {
     console.error('Erreur:', error)
-    const message = error instanceof Error ? error.message : "Une erreur est survenue"
+    const message = error instanceof Error ? error.message : 'Une erreur est survenue'
     showLocalToast(message, 'error')
   }
 }
@@ -344,7 +341,9 @@ const deleteGarage = async (garage: Garage) => {
 
   try {
     await garageService.deleteGarage(garage.id)
-    garages.value = garages.value.filter(g => g.id !== garage.id)
+    garages.value = garages.value.filter((g) => g.id !== garage.id)
+    // Mettre à jour le cache après la suppression
+    garageService.saveToCache(garages.value)
     showLocalToast('Garage supprimé avec succès', 'success')
   } catch (error) {
     showLocalToast('Erreur lors de la suppression du garage', 'error')
@@ -354,6 +353,15 @@ const deleteGarage = async (garage: Garage) => {
 const formatAddress = (address: Address) => {
   return `${address.street}, ${address.postal_code} ${address.city}`
 }
+
+watch(
+  () => props.isModalOpen,
+  (newValue) => {
+    if (newValue) {
+      fetchGarages()
+    }
+  }
+)
 
 onMounted(() => {
   if (props.isModalOpen) {
@@ -834,7 +842,7 @@ tr:hover td {
   -webkit-backdrop-filter: blur(12px);
   border-radius: 8px;
   padding: 1rem;
-  box-shadow: 
+  box-shadow:
     0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
   max-width: 400px;
@@ -863,4 +871,4 @@ tr:hover td {
   opacity: 0;
   transform: translateX(30px);
 }
-</style> 
+</style>

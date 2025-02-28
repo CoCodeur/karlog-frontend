@@ -2,7 +2,7 @@ import axios from 'axios'
 import authService from './auth.service'
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: process.env.VITE_API_URL,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json'
@@ -12,21 +12,42 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
-    const token = authService.getAccessToken()
+    console.log('🚀 API Request:', {
+      url: config.url,
+      method: config.method,
+      baseURL: config.baseURL,
+      headers: config.headers
+    })
+
+    const token = localStorage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
     return config
   },
   (error) => {
+    console.error('❌ API Request Error:', error)
     return Promise.reject(error)
   }
 )
 
 // Response interceptor
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('✅ API Response:', {
+      status: response.status,
+      data: response.data,
+      url: response.config.url
+    })
+    return response
+  },
   async (error) => {
+    console.error('❌ API Response Error:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      url: error.config?.url,
+      message: error.message
+    })
     const originalRequest = error.config
 
     // If error is 401 and we haven't retried yet

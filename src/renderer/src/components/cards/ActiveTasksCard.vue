@@ -101,6 +101,22 @@ const cancelTask = async (taskId: string) => {
   }
 }
 
+const deleteTask = async (taskId: string) => {
+  try {
+    await taskService.deleteTask(taskId)
+    // Rafraîchir les tâches depuis l'API
+    await fetchTasks()
+    showToast('Tâche supprimée avec succès', 'success')
+
+    // Si plus aucune tâche, fermer le modal
+    if (tasks.value.length === 0) {
+      closeModal()
+    }
+  } catch (error) {
+    showToast('Erreur lors de la suppression de la tâche', 'error')
+  }
+}
+
 onMounted(async () => {
   console.log('ActiveTasksCard monté, appel de fetchTasks')
   await fetchTasks()
@@ -194,23 +210,21 @@ defineExpose({
                   <td>{{ task.hours }}h</td>
                   <td>
                     <div
-                      v-if="
-                        !task.task_records || task.task_records.every((record) => record.end_date)
-                      "
+                      v-if="!task.activeWorkers || task.activeWorkers.length === 0"
                       class="no-workers"
                     >
                       Aucun travailleur
                     </div>
                     <div v-else class="workers-list">
                       <div
-                        v-for="record in task.task_records.filter((r) => !r.end_date)"
-                        :key="record._id"
+                        v-for="worker in task.activeWorkers"
+                        :key="worker.id"
                         class="worker-item"
                       >
                         <i class="fas fa-user"></i>
-                        {{ record.user?.first_name }} {{ record.user?.last_name }}
+                        {{ worker.firstName }} {{ worker.lastName }}
                         <span class="worker-time">
-                          (depuis {{ new Date(record.start_date).toLocaleString() }})
+                          (depuis {{ new Date(worker.startDate).toLocaleString() }})
                         </span>
                       </div>
                     </div>
@@ -224,6 +238,10 @@ defineExpose({
                       <button class="action-btn cancel-btn" @click="cancelTask(task.id)">
                         <i class="fas fa-times"></i>
                         Annuler
+                      </button>
+                      <button class="action-btn delete-btn" @click="deleteTask(task.id)">
+                        <i class="fas fa-trash"></i>
+                        Supprimer
                       </button>
                     </div>
                   </td>
@@ -556,6 +574,17 @@ tr:hover td {
 
 .cancel-btn:hover {
   background: rgb(185, 28, 28);
+  transform: translateY(-1px);
+}
+
+.delete-btn {
+  background: rgb(100, 100, 100);
+  border: none;
+  color: white;
+}
+
+.delete-btn:hover {
+  background: rgb(75, 75, 75);
   transform: translateY(-1px);
 }
 

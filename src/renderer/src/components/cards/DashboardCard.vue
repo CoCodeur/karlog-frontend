@@ -9,8 +9,12 @@
               <div class="filter-group">
                 <select v-model="selectedGarageId" class="filter-select">
                   <option value="">Tous les garages</option>
-                  <option v-for="garage in analytics" :key="garage.garage_id" :value="garage.garage_id">
-                    {{ garage.garage_name }}
+                  <option
+                    v-for="garage in analytics"
+                    :key="garage.garage_id"
+                    :value="garage.garage_id"
+                  >
+                    Garage {{ garage.garage_id }}
                   </option>
                 </select>
               </div>
@@ -20,12 +24,19 @@
                   <option value="yearly">Par année</option>
                 </select>
               </div>
-              <div class="filter-group" v-if="periodType === 'monthly'">
-                <input type="month" v-model="selectedMonth" class="filter-select" :max="currentMonth">
+              <div v-if="periodType === 'monthly'" class="filter-group">
+                <input
+                  v-model="selectedMonth"
+                  type="month"
+                  class="filter-select"
+                  :max="currentMonth"
+                />
               </div>
-              <div class="filter-group" v-else>
+              <div v-else class="filter-group">
                 <select v-model="selectedYear" class="filter-select">
-                  <option v-for="year in availableYears" :key="year" :value="year">{{ year }}</option>
+                  <option v-for="year in availableYears" :key="year" :value="year">
+                    {{ year }}
+                  </option>
                 </select>
               </div>
             </div>
@@ -35,150 +46,86 @@
           </button>
         </div>
 
-        <div class="dashboard-body">
-          <div v-if="loading" class="loading-container">
-            <span class="loading loading-spinner loading-lg"></span>
+        <div class="dashboard-content">
+          <div class="view-selector">
+            <button
+              class="view-btn"
+              :class="{ active: currentView === 'kpis' }"
+              @click="currentView = 'kpis'"
+            >
+              <i class="fas fa-chart-pie"></i>
+              Indicateurs
+            </button>
+            <button
+              class="view-btn"
+              :class="{ active: currentView === 'charts' }"
+              @click="currentView = 'charts'"
+            >
+              <i class="fas fa-chart-bar"></i>
+              Graphiques
+            </button>
           </div>
-          <template v-else>
-            <!-- KPIs Financiers avec graphiques -->
-            <div class="kpi-section">
-              <h3>KPIs Financiers</h3>
-              <div class="section-content">
-                <div class="kpi-grid">
-                  <div class="kpi-card" v-for="(kpi, index) in financialKPIs" :key="index">
-                    <div class="tooltip-wrapper">
-                      <div class="info-icon">
-                        <i class="fas fa-question-circle"></i>
-                        <div class="tooltip">{{ kpi.description }}</div>
-                      </div>
-                    </div>
-                    <div class="kpi-icon">
-                      <i :class="kpi.icon"></i>
-                    </div>
-                    <div class="kpi-content">
-                      <h4>{{ kpi.label }}</h4>
-                      <p class="kpi-value">{{ kpi.value }}</p>
-                    </div>
-                  </div>
-                </div>
-                <div class="chart-container">
-                  <div class="chart-header">
-                    <div class="tooltip-wrapper">
-                      <div class="info-icon">
-                        <i class="fas fa-question-circle"></i>
-                        <div class="tooltip">{{ chartDescriptions.revenue }}</div>
-                      </div>
-                    </div>
-                  </div>
-                  <canvas ref="revenueChart"></canvas>
-                </div>
-              </div>
-            </div>
 
-            <!-- KPIs de Pertes avec graphiques -->
-            <div class="kpi-section">
-              <h3>Revenus perdus</h3>
-              <div class="section-content">
+          <template v-if="currentAnalytics">
+            <!-- Vue Indicateurs -->
+            <template v-if="currentView === 'kpis'">
+              <!-- Indicateurs -->
+              <div class="kpi-section">
+                <h3>Indicateurs</h3>
                 <div class="kpi-grid">
-                  <div class="kpi-card" v-for="(kpi, index) in lostRevenueKPIs" :key="index">
-                    <div class="tooltip-wrapper">
+                  <div v-for="(kpi, index) in kpiCards" :key="index" class="kpi-card">
+                    <div class="kpi-header">
+                      <i :class="kpi.icon"></i>
                       <div class="info-icon">
-                        <i class="fas fa-question-circle"></i>
-                        <div class="tooltip">{{ kpi.description }}</div>
+                        <i
+                          class="fas fa-info-circle"
+                          @mouseenter="showTooltip(index)"
+                          @mouseleave="hideTooltip(index)"
+                        ></i>
+                        <div class="tooltip" :class="{ show: activeTooltip === index }">
+                          {{ kpi.description }}
+                        </div>
                       </div>
                     </div>
-                    <div class="kpi-icon warning">
-                      <i :class="kpi.icon"></i>
-                    </div>
-                    <div class="kpi-content">
+                    <div class="kpi-body">
                       <h4>{{ kpi.label }}</h4>
                       <p class="kpi-value">{{ kpi.value }}</p>
-                    </div>
-                  </div>
-                </div>
-                <div class="chart-container">
-                  <div class="chart-header">
-                    <div class="tooltip-wrapper">
-                      <div class="info-icon">
-                        <i class="fas fa-question-circle"></i>
-                        <div class="tooltip">{{ chartDescriptions.lostRevenue }}</div>
+                      <div
+                        v-if="kpi.evolution !== undefined"
+                        class="kpi-evolution"
+                        :class="getEvolutionClass(kpi.evolution, kpi.isWarning)"
+                      >
+                        <i :class="getEvolutionIcon(kpi.evolution, kpi.isWarning)"></i>
+                        {{ formatEvolution(kpi.evolution) }}
                       </div>
                     </div>
                   </div>
-                  <canvas ref="lostRevenueChart"></canvas>
                 </div>
               </div>
-            </div>
+            </template>
 
-            <!-- KPIs d'Optimisation avec graphiques -->
-            <div class="kpi-section">
-              <h3>Optimisation</h3>
-              <div class="section-content">
-                <div class="kpi-grid">
-                  <div class="kpi-card" v-for="(kpi, index) in optimizationKPIs" :key="index">
-                    <div class="tooltip-wrapper">
-                      <div class="info-icon">
-                        <i class="fas fa-question-circle"></i>
-                        <div class="tooltip">{{ kpi.description }}</div>
-                      </div>
-                    </div>
-                    <div class="kpi-icon" :class="{ warning: kpi.isWarning }">
-                      <i :class="kpi.icon"></i>
-                    </div>
-                    <div class="kpi-content">
-                      <h4>{{ kpi.label }}</h4>
-                      <p class="kpi-value">{{ kpi.value }}</p>
-                    </div>
-                  </div>
-                </div>
-                <div class="chart-container">
-                  <div class="chart-header">
-                    <div class="tooltip-wrapper">
-                      <div class="info-icon">
-                        <i class="fas fa-question-circle"></i>
-                        <div class="tooltip">{{ chartDescriptions.optimization }}</div>
-                      </div>
-                    </div>
-                  </div>
-                  <canvas ref="optimizationChart"></canvas>
-                </div>
+            <!-- Vue Graphiques -->
+            <template v-if="currentView === 'charts'">
+              <div class="chart-controls">
+                <select v-model="selectedChart" class="chart-select">
+                  <option value="revenue">Chiffre d'affaires</option>
+                  <option value="profitability">Rentabilité</option>
+                  <option value="delay">Taux de retard</option>
+                  <option value="cancellation">Taux d'annulation</option>
+                  <option value="losses">Pertes estimées</option>
+                  <option value="average">Revenu moyen par tâche</option>
+                </select>
               </div>
-            </div>
 
-            <!-- KPIs de Simulation avec graphiques -->
-            <div class="kpi-section">
-              <h3>Simulations</h3>
-              <div class="section-content">
-                <div class="kpi-grid">
-                  <div class="kpi-card" v-for="(kpi, index) in simulationKPIs" :key="index">
-                    <div class="tooltip-wrapper">
-                      <div class="info-icon">
-                        <i class="fas fa-question-circle"></i>
-                        <div class="tooltip">{{ kpi.description }}</div>
-                      </div>
-                    </div>
-                    <div class="kpi-icon success">
-                      <i :class="kpi.icon"></i>
-                    </div>
-                    <div class="kpi-content">
-                      <h4>{{ kpi.label }}</h4>
-                      <p class="kpi-value">{{ kpi.value }}</p>
-                    </div>
+              <div class="single-chart-container">
+                <div class="chart-card full-screen">
+                  <h3>{{ getChartTitle }}</h3>
+                  <div class="chart-container">
+                    <canvas ref="mainChart"></canvas>
                   </div>
-                </div>
-                <div class="chart-container">
-                  <div class="chart-header">
-                    <div class="tooltip-wrapper">
-                      <div class="info-icon">
-                        <i class="fas fa-question-circle"></i>
-                        <div class="tooltip">{{ chartDescriptions.simulation }}</div>
-                      </div>
-                    </div>
-                  </div>
-                  <canvas ref="simulationChart"></canvas>
                 </div>
               </div>
-            </div>
+            </template>
           </template>
         </div>
       </div>
@@ -187,11 +134,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
+import { Chart, Scale, CoreScaleOptions } from 'chart.js/auto'
+import { useToast } from '../../composables/useToast'
+import type { AnalyticsPeriod } from '../../types/analytics'
+import { formatCurrency, formatPercent } from '../../utils/formatters'
 import { analyticsService } from '../../services/analytics.service'
 import type { GarageAnalytics } from '../../types/analytics'
-import { useToast } from '../../composables/useToast'
-import Chart from 'chart.js/auto'
 
 const props = defineProps<{
   isModalOpen: boolean
@@ -210,23 +159,19 @@ const periodType = ref('monthly')
 const selectedMonth = ref(new Date().toISOString().slice(0, 7))
 const selectedYear = ref(new Date().getFullYear().toString())
 const currentMonth = new Date().toISOString().slice(0, 7)
+const activeTooltip = ref<string | number | null>(null)
+const currentView = ref('kpis')
+const selectedChart = ref('revenue')
+const mainChart = ref<HTMLCanvasElement | null>(null)
 
-// Références pour les graphiques
-const revenueChart = ref<HTMLCanvasElement | null>(null)
-const lostRevenueChart = ref<HTMLCanvasElement | null>(null)
-const optimizationChart = ref<HTMLCanvasElement | null>(null)
-const simulationChart = ref<HTMLCanvasElement | null>(null)
-
-// Instances des graphiques
-let revenueChartInstance: Chart | null = null
-let lostRevenueChartInstance: Chart | null = null
-let optimizationChartInstance: Chart | null = null
-let simulationChartInstance: Chart | null = null
+const charts: { [key: string]: Chart | null } = {
+  main: null
+}
 
 const availableYears = computed(() => {
   const years = new Set<number>()
-  analytics.value.forEach(garage => {
-    garage.yearly_analytics.forEach(analytics => {
+  analytics.value.forEach((garage) => {
+    garage.yearly_analytics.forEach((analytics) => {
       years.add(new Date(analytics.date).getFullYear())
     })
   })
@@ -234,145 +179,196 @@ const availableYears = computed(() => {
 })
 
 const selectedAnalytics = computed(() => {
-  if (!selectedGarageId.value) return analytics.value
-  return analytics.value.filter(a => a.garage_id === selectedGarageId.value)
+  if (!analytics.value) return []
+
+  if (selectedGarageId.value) {
+    return analytics.value.filter((garage) => garage.garage_id === selectedGarageId.value)
+  }
+
+  return analytics.value
 })
 
 const currentAnalytics = computed(() => {
-  if (selectedAnalytics.value.length === 0) return null
-
-  const analytics = periodType.value === 'monthly' 
-    ? selectedAnalytics.value.map(garage => garage.monthly_analytics.find(a => a.date.startsWith(selectedMonth.value)))
-    : selectedAnalytics.value.map(garage => garage.yearly_analytics.find(a => a.date.startsWith(selectedYear.value)))
-
-  if (!selectedGarageId.value) {
-    // Agréger les données de tous les garages
-    // ... (garder le code existant pour l'agrégation)
+  if (!selectedAnalytics.value.length) {
+    return {
+      date: periodType.value === 'monthly' ? selectedMonth.value : selectedYear.value,
+      processing_timestamp: new Date().toISOString(),
+      chiffre_affaires_total: 0,
+      rentabilite: 0,
+      taux_retard: 0,
+      taux_annulation: 0,
+      perte_estimee: 0,
+      revenu_moyen_par_tache: 0,
+      evolution: {
+        chiffre_affaires_total: 0,
+        rentabilite: 0,
+        taux_retard: 0,
+        taux_annulation: 0,
+        perte_estimee: 0,
+        revenu_moyen_par_tache: 0
+      }
+    }
   }
 
-  return analytics[0]
+  if (selectedGarageId.value) {
+    const garage = selectedAnalytics.value[0]
+    const data =
+      periodType.value === 'monthly'
+        ? garage.monthly_analytics.find((a) => a.date === selectedMonth.value)
+        : garage.yearly_analytics.find((a) => a.date.startsWith(selectedYear.value))
+
+    if (!data) {
+      return {
+        date: periodType.value === 'monthly' ? selectedMonth.value : selectedYear.value,
+        processing_timestamp: new Date().toISOString(),
+        chiffre_affaires_total: 0,
+        rentabilite: 0,
+        taux_retard: 0,
+        taux_annulation: 0,
+        perte_estimee: 0,
+        revenu_moyen_par_tache: 0,
+        evolution: {
+          chiffre_affaires_total: 0,
+          rentabilite: 0,
+          taux_retard: 0,
+          taux_annulation: 0,
+          perte_estimee: 0,
+          revenu_moyen_par_tache: 0
+        }
+      }
+    }
+
+    return data
+  }
+
+  // Agréger les données de tous les garages
+  const garagesData = selectedAnalytics.value
+    .map((garage) => {
+      if (periodType.value === 'monthly') {
+        return garage.monthly_analytics.find((a) => a.date === selectedMonth.value)
+      }
+      return garage.yearly_analytics.find((a) => a.date.startsWith(selectedYear.value))
+    })
+    .filter((data) => data !== undefined) as AnalyticsPeriod[]
+
+  if (!garagesData.length) {
+    return {
+      date: periodType.value === 'monthly' ? selectedMonth.value : selectedYear.value,
+      processing_timestamp: new Date().toISOString(),
+      chiffre_affaires_total: 0,
+      rentabilite: 0,
+      taux_retard: 0,
+      taux_annulation: 0,
+      perte_estimee: 0,
+      revenu_moyen_par_tache: 0,
+      evolution: {
+        chiffre_affaires_total: 0,
+        rentabilite: 0,
+        taux_retard: 0,
+        taux_annulation: 0,
+        perte_estimee: 0,
+        revenu_moyen_par_tache: 0
+      }
+    }
+  }
+
+  return {
+    date: garagesData[0].date,
+    processing_timestamp: garagesData[0].processing_timestamp,
+    chiffre_affaires_total: garagesData.reduce((sum, data) => sum + data.chiffre_affaires_total, 0),
+    rentabilite: garagesData.reduce((sum, data) => sum + data.rentabilite, 0) / garagesData.length,
+    taux_retard: garagesData.reduce((sum, data) => sum + data.taux_retard, 0) / garagesData.length,
+    taux_annulation:
+      garagesData.reduce((sum, data) => sum + data.taux_annulation, 0) / garagesData.length,
+    perte_estimee: garagesData.reduce((sum, data) => sum + data.perte_estimee, 0),
+    revenu_moyen_par_tache:
+      garagesData.reduce((sum, data) => sum + data.revenu_moyen_par_tache, 0) / garagesData.length,
+    evolution: {
+      chiffre_affaires_total: garagesData.reduce(
+        (sum, data) => sum + data.evolution.chiffre_affaires_total,
+        0
+      ),
+      rentabilite:
+        garagesData.reduce((sum, data) => sum + data.evolution.rentabilite, 0) / garagesData.length,
+      taux_retard:
+        garagesData.reduce((sum, data) => sum + data.evolution.taux_retard, 0) / garagesData.length,
+      taux_annulation:
+        garagesData.reduce((sum, data) => sum + data.evolution.taux_annulation, 0) /
+        garagesData.length,
+      perte_estimee: garagesData.reduce((sum, data) => sum + data.evolution.perte_estimee, 0),
+      revenu_moyen_par_tache:
+        garagesData.reduce((sum, data) => sum + data.evolution.revenu_moyen_par_tache, 0) /
+        garagesData.length
+    }
+  }
 })
 
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value)
-}
-
-const formatPercent = (value: number) => {
-  return new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFractionDigits: 1 }).format(value / 100)
-}
-
-const formatTime = (hours: number) => {
-  const h = Math.floor(hours)
-  const m = Math.round((hours - h) * 60)
-  return `${h}h${m.toString().padStart(2, '0')}`
-}
-
-const chartDescriptions = {
-  revenue: "Visualisation de l'évolution du chiffre d'affaires dans le temps. La courbe permet d'identifier les tendances et les périodes de croissance ou de ralentissement.",
-  lostRevenue: "Comparaison des revenus perdus entre les tâches annulées et non terminées. Les barres empilées permettent de voir la répartition des pertes par type.",
-  optimization: "Analyse des pertes dues aux heures supplémentaires vs les gains d'optimisation. Le graphique met en évidence l'équilibre entre pertes et gains d'efficacité.",
-  simulation: "Projection des gains potentiels basée sur deux scénarios : augmentation des tarifs et réduction des annulations. Permet d'identifier les opportunités d'amélioration."
-}
-
-const financialKPIs = computed(() => {
+const kpiCards = computed(() => {
   if (!currentAnalytics.value) return []
-  
+
   return [
     {
-      label: 'Chiffre d\'affaires',
-      value: formatCurrency(currentAnalytics.value.financial_kpi.total_revenue),
+      label: "Chiffre d'affaires",
+      value: formatCurrency(currentAnalytics.value.chiffre_affaires_total),
       icon: 'fas fa-euro-sign',
-      description: 'Somme totale des revenus générés par les services sur la période sélectionnée. Inclut toutes les prestations facturées.'
+      evolution: currentAnalytics.value.evolution.chiffre_affaires_total,
+      description: "Chiffre d'affaires total de la période",
+      gradient: 'from-violet-500 to-purple-500'
     },
     {
-      label: 'CA horaire moyen',
-      value: formatCurrency(currentAnalytics.value.financial_kpi.average_hourly_revenue),
-      icon: 'fas fa-clock',
-      description: 'Revenu moyen généré par heure de travail. Indicateur clé de la rentabilité horaire des services.'
-    },
-    {
-      label: 'Prix moyen service',
-      value: formatCurrency(currentAnalytics.value.financial_kpi.average_service_price),
-      icon: 'fas fa-tag',
-      description: 'Prix moyen facturé par intervention. Permet de suivre l\'évolution des tarifs et la valorisation des services.'
-    },
-    {
-      label: 'Taux de facturation réel',
-      value: formatPercent(currentAnalytics.value.financial_kpi.real_billing_rate),
-      icon: 'fas fa-percentage',
-      description: 'Pourcentage du temps effectivement facturé par rapport au temps total travaillé. Mesure l\'efficacité de la facturation.'
-    }
-  ]
-})
-
-const lostRevenueKPIs = computed(() => {
-  if (!currentAnalytics.value) return []
-  
-  return [
-    {
-      label: 'Montant tâches annulées',
-      value: formatCurrency(currentAnalytics.value.lost_revenue_kpi.canceled_task_amount),
-      icon: 'fas fa-ban',
-      description: 'Revenus perdus dus aux annulations de services. Représente le manque à gagner direct des annulations.'
-    },
-    {
-      label: 'Montant tâches non terminées',
-      value: formatCurrency(currentAnalytics.value.lost_revenue_kpi.unfinished_task_amount),
-      icon: 'fas fa-exclamation-triangle',
-      description: 'Revenus non perçus sur les tâches inachevées. Impact financier des interventions qui n\'ont pas été menées à terme.'
-    }
-  ]
-})
-
-const optimizationKPIs = computed(() => {
-  if (!currentAnalytics.value) return []
-  
-  return [
-    {
-      label: 'Pertes dues aux heures sup',
-      value: formatCurrency(currentAnalytics.value.optimization_kpi.loss_due_to_overtime),
-      icon: 'fas fa-business-time',
-      isWarning: true,
-      description: 'Coût financier des dépassements horaires. Inclut les surcoûts liés aux heures supplémentaires et à la sous-optimisation du temps.'
-    },
-    {
-      label: 'Gains tâches plus rapides',
-      value: formatCurrency(currentAnalytics.value.optimization_kpi.gain_from_faster_tasks),
-      icon: 'fas fa-tachometer-alt',
-      description: 'Gains réalisés grâce aux interventions terminées plus rapidement que prévu. Mesure de l\'efficacité opérationnelle.'
-    },
-    {
-      label: 'Tâches en heures sup',
-      value: formatPercent(currentAnalytics.value.optimization_kpi.percentage_of_overtime_tasks),
-      icon: 'fas fa-clock',
-      isWarning: true,
-      description: 'Pourcentage des interventions ayant dépassé le temps prévu. Indicateur de la précision des estimations et de la gestion du temps.'
-    },
-    {
-      label: 'Temps moyen heures sup',
-      value: formatTime(currentAnalytics.value.optimization_kpi.average_overtime_time),
-      icon: 'fas fa-hourglass-half',
-      isWarning: true,
-      description: 'Durée moyenne des dépassements horaires par intervention. Permet d\'évaluer l\'ampleur des dépassements de temps.'
-    }
-  ]
-})
-
-const simulationKPIs = computed(() => {
-  if (!currentAnalytics.value) return []
-  
-  return [
-    {
-      label: 'CA si +10% facturation',
-      value: formatCurrency(currentAnalytics.value.simulation_kpi.revenue_if_billed_10_percent_more),
+      label: 'Rentabilité',
+      value: formatPercent(currentAnalytics.value.rentabilite),
       icon: 'fas fa-chart-line',
-      description: 'Projection du chiffre d\'affaires avec une augmentation de 10% des tarifs. Simulation de l\'impact d\'une revalorisation des services.'
+      evolution: currentAnalytics.value.evolution.rentabilite,
+      description: 'Taux de rentabilité',
+      gradient:
+        currentAnalytics.value.rentabilite < 0
+          ? 'from-red-500 to-red-600'
+          : 'from-violet-500 to-purple-500'
     },
     {
-      label: 'Gain si -20% annulations',
-      value: formatCurrency(currentAnalytics.value.simulation_kpi.gain_if_20_percent_fewer_cancellations),
-      icon: 'fas fa-chart-bar',
-      description: 'Gains potentiels si le taux d\'annulation était réduit de 20%. Mesure de l\'opportunité d\'amélioration de la gestion des annulations.'
+      label: 'Taux de retard',
+      value: formatPercent(currentAnalytics.value.taux_retard),
+      icon: 'fas fa-clock',
+      evolution: -currentAnalytics.value.evolution.taux_retard,
+      description: 'Pourcentage des tâches en retard',
+      gradient:
+        currentAnalytics.value.taux_retard > 20
+          ? 'from-red-500 to-red-600'
+          : 'from-violet-500 to-purple-500',
+      isWarning: true
+    },
+    {
+      label: "Taux d'annulation",
+      value: formatPercent(currentAnalytics.value.taux_annulation),
+      icon: 'fas fa-times-circle',
+      evolution: -currentAnalytics.value.evolution.taux_annulation,
+      description: 'Pourcentage des tâches annulées',
+      gradient:
+        currentAnalytics.value.taux_annulation > 15
+          ? 'from-red-500 to-red-600'
+          : 'from-violet-500 to-purple-500',
+      isWarning: true
+    },
+    {
+      label: 'Perte estimée',
+      value: formatCurrency(currentAnalytics.value.perte_estimee),
+      icon: 'fas fa-exclamation-triangle',
+      evolution: -currentAnalytics.value.evolution.perte_estimee,
+      description: 'Pertes financières estimées',
+      gradient:
+        currentAnalytics.value.perte_estimee > 0
+          ? 'from-red-500 to-red-600'
+          : 'from-violet-500 to-purple-500',
+      isWarning: true
+    },
+    {
+      label: 'Revenu moyen/tâche',
+      value: formatCurrency(currentAnalytics.value.revenu_moyen_par_tache),
+      icon: 'fas fa-tasks',
+      evolution: currentAnalytics.value.evolution.revenu_moyen_par_tache,
+      description: 'Revenu moyen par tâche',
+      gradient: 'from-violet-500 to-purple-500'
     }
   ]
 })
@@ -384,214 +380,193 @@ const closeModal = () => {
 const fetchAnalytics = async () => {
   try {
     loading.value = true
+    console.log('Fetching analytics data...')
     analytics.value = await analyticsService.getAnalytics()
+    console.log('Analytics data received:', analytics.value)
   } catch (error) {
-    console.error('Erreur:', error)
+    console.error('Erreur lors du chargement des analytics:', error)
     showToast('Erreur lors du chargement des analytics', 'error')
   } finally {
     loading.value = false
   }
 }
 
-const updateCharts = () => {
-  if (!currentAnalytics.value) return
+const showTooltip = (index: string | number) => {
+  activeTooltip.value = index
+}
 
-  // Mise à jour du graphique de revenus
-  if (revenueChartInstance) {
-    const data = periodType.value === 'monthly' 
-      ? selectedAnalytics.value.map(garage => ({
-          label: garage.garage_name,
-          data: garage.monthly_analytics
-            .filter(a => a.date.startsWith(selectedYear.value))
-            .map(a => a.financial_kpi.total_revenue),
-          borderColor: `hsl(${Math.random() * 360}, 70%, 50%)`,
-          tension: 0.4
-        }))
-      : selectedAnalytics.value.map(garage => ({
-          label: garage.garage_name,
-          data: garage.yearly_analytics
-            .map(a => a.financial_kpi.total_revenue),
-          borderColor: `hsl(${Math.random() * 360}, 70%, 50%)`,
-          tension: 0.4
-        }))
-
-    const labels = periodType.value === 'monthly'
-      ? ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
-      : availableYears.value
-
-    revenueChartInstance.data.labels = labels
-    revenueChartInstance.data.datasets = data
-    revenueChartInstance.update()
-  }
-
-  // Mise à jour du graphique des revenus perdus
-  if (lostRevenueChartInstance) {
-    const data = periodType.value === 'monthly'
-      ? selectedAnalytics.value.map(garage => [
-          {
-            label: `${garage.garage_name} - Tâches annulées`,
-            data: garage.monthly_analytics
-              .filter(a => a.date.startsWith(selectedYear.value))
-              .map(a => a.lost_revenue_kpi.canceled_task_amount),
-            backgroundColor: `hsla(0, 70%, 50%, 0.8)`,
-            stack: garage.garage_name
-          },
-          {
-            label: `${garage.garage_name} - Tâches non terminées`,
-            data: garage.monthly_analytics
-              .filter(a => a.date.startsWith(selectedYear.value))
-              .map(a => a.lost_revenue_kpi.unfinished_task_amount),
-            backgroundColor: `hsla(30, 70%, 50%, 0.8)`,
-            stack: garage.garage_name
-          }
-        ]).flat()
-      : selectedAnalytics.value.map(garage => [
-          {
-            label: `${garage.garage_name} - Tâches annulées`,
-            data: garage.yearly_analytics
-              .map(a => a.lost_revenue_kpi.canceled_task_amount),
-            backgroundColor: `hsla(0, 70%, 50%, 0.8)`,
-            stack: garage.garage_name
-          },
-          {
-            label: `${garage.garage_name} - Tâches non terminées`,
-            data: garage.yearly_analytics
-              .map(a => a.lost_revenue_kpi.unfinished_task_amount),
-            backgroundColor: `hsla(30, 70%, 50%, 0.8)`,
-            stack: garage.garage_name
-          }
-        ]).flat()
-
-    const labels = periodType.value === 'monthly'
-      ? ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
-      : availableYears.value
-
-    lostRevenueChartInstance.data.labels = labels
-    lostRevenueChartInstance.data.datasets = data
-    lostRevenueChartInstance.update()
-  }
-
-  // Mise à jour du graphique d'optimisation
-  if (optimizationChartInstance) {
-    const data = periodType.value === 'monthly'
-      ? selectedAnalytics.value.map(garage => [
-          {
-            label: `${garage.garage_name} - Pertes heures sup`,
-            data: garage.monthly_analytics
-              .filter(a => a.date.startsWith(selectedYear.value))
-              .map(a => a.optimization_kpi.loss_due_to_overtime),
-            backgroundColor: `hsla(0, 70%, 50%, 0.8)`,
-            stack: 'pertes'
-          },
-          {
-            label: `${garage.garage_name} - Gains optimisation`,
-            data: garage.monthly_analytics
-              .filter(a => a.date.startsWith(selectedYear.value))
-              .map(a => a.optimization_kpi.gain_from_faster_tasks),
-            backgroundColor: `hsla(120, 70%, 50%, 0.8)`,
-            stack: 'gains'
-          }
-        ]).flat()
-      : selectedAnalytics.value.map(garage => [
-          {
-            label: `${garage.garage_name} - Pertes heures sup`,
-            data: garage.yearly_analytics
-              .map(a => a.optimization_kpi.loss_due_to_overtime),
-            backgroundColor: `hsla(0, 70%, 50%, 0.8)`,
-            stack: 'pertes'
-          },
-          {
-            label: `${garage.garage_name} - Gains optimisation`,
-            data: garage.yearly_analytics
-              .map(a => a.optimization_kpi.gain_from_faster_tasks),
-            backgroundColor: `hsla(120, 70%, 50%, 0.8)`,
-            stack: 'gains'
-          }
-        ]).flat()
-
-    const labels = periodType.value === 'monthly'
-      ? ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
-      : availableYears.value
-
-    optimizationChartInstance.data.labels = labels
-    optimizationChartInstance.data.datasets = data
-    optimizationChartInstance.update()
-  }
-
-  // Mise à jour du graphique de simulation
-  if (simulationChartInstance) {
-    const data = periodType.value === 'monthly'
-      ? selectedAnalytics.value.map(garage => [
-          {
-            label: `${garage.garage_name} - CA +10% facturation`,
-            data: garage.monthly_analytics
-              .filter(a => a.date.startsWith(selectedYear.value))
-              .map(a => a.simulation_kpi.revenue_if_billed_10_percent_more),
-            backgroundColor: `hsla(200, 70%, 50%, 0.8)`,
-            stack: garage.garage_name
-          },
-          {
-            label: `${garage.garage_name} - Gain -20% annulations`,
-            data: garage.monthly_analytics
-              .filter(a => a.date.startsWith(selectedYear.value))
-              .map(a => a.simulation_kpi.gain_if_20_percent_fewer_cancellations),
-            backgroundColor: `hsla(270, 70%, 50%, 0.8)`,
-            stack: garage.garage_name
-          }
-        ]).flat()
-      : selectedAnalytics.value.map(garage => [
-          {
-            label: `${garage.garage_name} - CA +10% facturation`,
-            data: garage.yearly_analytics
-              .map(a => a.simulation_kpi.revenue_if_billed_10_percent_more),
-            backgroundColor: `hsla(200, 70%, 50%, 0.8)`,
-            stack: garage.garage_name
-          },
-          {
-            label: `${garage.garage_name} - Gain -20% annulations`,
-            data: garage.yearly_analytics
-              .map(a => a.simulation_kpi.gain_if_20_percent_fewer_cancellations),
-            backgroundColor: `hsla(270, 70%, 50%, 0.8)`,
-            stack: garage.garage_name
-          }
-        ]).flat()
-
-    const labels = periodType.value === 'monthly'
-      ? ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
-      : availableYears.value
-
-    simulationChartInstance.data.labels = labels
-    simulationChartInstance.data.datasets = data
-    simulationChartInstance.update()
+const hideTooltip = (index: string | number) => {
+  if (activeTooltip.value === index) {
+    activeTooltip.value = null
   }
 }
 
+const getChartTitle = computed(() => {
+  const titles = {
+    revenue: "Évolution du chiffre d'affaires",
+    profitability: 'Évolution de la rentabilité',
+    delay: 'Évolution du taux de retard',
+    cancellation: "Évolution du taux d'annulation",
+    losses: 'Évolution des pertes estimées',
+    average: 'Évolution du revenu moyen par tâche'
+  }
+  return titles[selectedChart.value] || ''
+})
+
+const getHistoricalData = (type: string) => {
+  const dates: string[] = []
+  const data: number[] = []
+
+  if (periodType.value === 'monthly') {
+    // Utiliser le mois sélectionné comme référence
+    const current = new Date(selectedMonth.value)
+    const selectedDate = new Date(new Date(current).setMonth(current.getMonth() + 1))
+    // Commencer par le mois sélectionné et remonter 3 mois en arrière
+    for (let i = 0; i <= 3; i++) {
+      const date = new Date(selectedDate.getFullYear(), selectedDate.getMonth() - (3 - i), 1)
+      const monthStr = date.toISOString().slice(0, 7)
+      dates.push(monthStr)
+
+      const monthData = selectedAnalytics.value
+        .map((garage) => {
+          const analytics = garage.monthly_analytics.find((a) => a.date === monthStr)
+          if (!analytics) return 0
+          switch (type) {
+            case 'revenue':
+              return analytics.chiffre_affaires_total
+            case 'profitability':
+              return analytics.rentabilite
+            case 'delay':
+              return analytics.taux_retard
+            case 'cancellation':
+              return analytics.taux_annulation
+            case 'losses':
+              return analytics.perte_estimee
+            case 'average':
+              return analytics.revenu_moyen_par_tache
+            default:
+              return 0
+          }
+        })
+        .reduce((sum, val) => sum + val, 0)
+
+      data.push(monthData)
+    }
+  } else {
+    // Utiliser l'année sélectionnée comme référence
+    const targetYear = parseInt(selectedYear.value)
+
+    // Commencer par l'année sélectionnée et remonter 3 ans en arrière
+    for (let i = 0; i <= 3; i++) {
+      const year = targetYear - (3 - i)
+      dates.push(year.toString())
+
+      const yearData = selectedAnalytics.value
+        .map((garage) => {
+          const analytics = garage.yearly_analytics.find((a) => a.date.startsWith(year.toString()))
+          if (!analytics) return 0
+          switch (type) {
+            case 'revenue':
+              return analytics.chiffre_affaires_total
+            case 'profitability':
+              return analytics.rentabilite
+            case 'delay':
+              return analytics.taux_retard
+            case 'cancellation':
+              return analytics.taux_annulation
+            case 'losses':
+              return analytics.perte_estimee
+            case 'average':
+              return analytics.revenu_moyen_par_tache
+            default:
+              return 0
+          }
+        })
+        .reduce((sum, val) => sum + val, 0)
+
+      data.push(yearData)
+    }
+  }
+
+  return { dates, data }
+}
+
 const initCharts = () => {
-  // Configuration commune pour les graphiques
-  const commonOptions = {
+  // Destruction du graphique existant
+  if (charts.main) {
+    charts.main.destroy()
+  }
+
+  if (!mainChart.value) return
+
+  const { dates, data } = getHistoricalData(selectedChart.value)
+
+  const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'bottom' as const,
-        labels: {
-          color: 'rgba(255, 255, 255, 0.8)'
+        display: false
+      },
+      tooltip: {
+        mode: 'index' as const,
+        intersect: false,
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        titleColor: 'rgb(255, 255, 255)',
+        bodyColor: 'rgb(255, 255, 255)',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderWidth: 1,
+        callbacks: {
+          label: (context: { parsed: { y: number } }) => {
+            const value = context.parsed.y
+            switch (selectedChart.value) {
+              case 'revenue':
+              case 'losses':
+              case 'average':
+                return formatCurrency(value)
+              case 'profitability':
+              case 'delay':
+              case 'cancellation':
+                return formatPercent(value)
+              default:
+                return value.toString()
+            }
+          }
         }
       }
     },
     scales: {
       y: {
+        type: 'linear' as const,
+        beginAtZero: true,
         ticks: {
-          color: 'rgba(255, 255, 255, 0.6)',
-          callback: (value: number) => formatCurrency(value)
+          color: 'rgb(255, 255, 255)',
+          font: { size: 12 },
+          callback: function (this: Scale<CoreScaleOptions>, tickValue: number | string) {
+            const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue
+            switch (selectedChart.value) {
+              case 'revenue':
+              case 'losses':
+              case 'average':
+                return formatCurrency(value)
+              case 'profitability':
+              case 'delay':
+              case 'cancellation':
+                return formatPercent(value)
+              default:
+                return value
+            }
+          }
         },
         grid: {
           color: 'rgba(255, 255, 255, 0.1)'
         }
       },
       x: {
+        type: 'category' as const,
         ticks: {
-          color: 'rgba(255, 255, 255, 0.6)'
+          color: 'rgb(255, 255, 255)',
+          font: { size: 12 }
         },
         grid: {
           color: 'rgba(255, 255, 255, 0.1)'
@@ -600,120 +575,71 @@ const initCharts = () => {
     }
   }
 
-  // Initialiser le graphique de revenus
-  if (revenueChart.value) {
-    revenueChartInstance = new Chart(revenueChart.value, {
-      type: 'line',
-      data: {
-        labels: [],
-        datasets: []
-      },
-      options: {
-        ...commonOptions,
-        plugins: {
-          ...commonOptions.plugins,
-          title: {
-            display: true,
-            text: 'Évolution du chiffre d\'affaires',
-            color: 'rgba(255, 255, 255, 0.8)',
-            font: {
-              size: 16
-            }
-          }
+  charts.main = new Chart(mainChart.value, {
+    type: 'bar',
+    data: {
+      labels: dates.map((date) =>
+        periodType.value === 'monthly'
+          ? new Date(date).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+          : date
+      ),
+      datasets: [
+        {
+          data: data.length > 0 ? data : Array(4).fill(0),
+          backgroundColor: 'rgba(147, 51, 234, 0.5)',
+          borderColor: 'rgb(147, 51, 234)',
+          borderWidth: 1,
+          borderRadius: 8,
+          barThickness: 50,
+          hoverBackgroundColor: 'rgba(147, 51, 234, 0.7)'
         }
-      }
-    })
-  }
-
-  // Initialiser le graphique des revenus perdus
-  if (lostRevenueChart.value) {
-    lostRevenueChartInstance = new Chart(lostRevenueChart.value, {
-      type: 'bar',
-      data: {
-        labels: [],
-        datasets: []
-      },
-      options: {
-        ...commonOptions,
-        plugins: {
-          ...commonOptions.plugins,
-          title: {
-            display: true,
-            text: 'Revenus perdus par type',
-            color: 'rgba(255, 255, 255, 0.8)',
-            font: {
-              size: 16
-            }
-          }
-        }
-      }
-    })
-  }
-
-  // Initialiser le graphique d'optimisation
-  if (optimizationChart.value) {
-    optimizationChartInstance = new Chart(optimizationChart.value, {
-      type: 'bar',
-      data: {
-        labels: [],
-        datasets: []
-      },
-      options: {
-        ...commonOptions,
-        plugins: {
-          ...commonOptions.plugins,
-          title: {
-            display: true,
-            text: 'Pertes et gains d\'optimisation',
-            color: 'rgba(255, 255, 255, 0.8)',
-            font: {
-              size: 16
-            }
-          }
-        }
-      }
-    })
-  }
-
-  // Initialiser le graphique de simulation
-  if (simulationChart.value) {
-    simulationChartInstance = new Chart(simulationChart.value, {
-      type: 'bar',
-      data: {
-        labels: [],
-        datasets: []
-      },
-      options: {
-        ...commonOptions,
-        plugins: {
-          ...commonOptions.plugins,
-          title: {
-            display: true,
-            text: 'Simulations d\'amélioration',
-            color: 'rgba(255, 255, 255, 0.8)',
-            font: {
-              size: 16
-            }
-          }
-        }
-      }
-    })
-  }
-
-  // Mettre à jour les graphiques avec les données initiales
-  updateCharts()
+      ]
+    },
+    options: chartOptions
+  })
 }
 
-watch([periodType, selectedMonth, selectedYear, selectedGarageId], () => {
-  updateCharts()
+watch([currentView, selectedChart, currentAnalytics, selectedGarageId, periodType], () => {
+  if (currentView.value === 'charts') {
+    nextTick(() => {
+      initCharts()
+    })
+  }
+})
+
+onBeforeUnmount(() => {
+  Object.values(charts).forEach((chart) => {
+    if (chart) {
+      chart.destroy()
+    }
+  })
 })
 
 onMounted(async () => {
+  console.log('DashboardCard mounted, isModalOpen:', props.isModalOpen)
   if (props.isModalOpen) {
     await fetchAnalytics()
-    initCharts()
   }
 })
+
+const formatEvolution = (value: number): string => {
+  const absValue = Math.abs(value)
+  return `${value >= 0 ? '+' : '-'}${absValue.toFixed(1)}%`
+}
+
+const getEvolutionClass = (value: number, isWarning = false): string => {
+  if (isWarning) {
+    return value < 0 ? 'evolution-positive' : 'evolution-negative'
+  }
+  return value >= 0 ? 'evolution-positive' : 'evolution-negative'
+}
+
+const getEvolutionIcon = (value: number, isWarning = false): string => {
+  if (isWarning) {
+    return value < 0 ? 'fas fa-arrow-down' : 'fas fa-arrow-up'
+  }
+  return value >= 0 ? 'fas fa-arrow-up' : 'fas fa-arrow-down'
+}
 </script>
 
 <style scoped>
@@ -726,6 +652,27 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .dashboard-wrapper {
@@ -737,6 +684,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  animation: slideIn 0.4s ease;
 }
 
 .dashboard-header {
@@ -755,9 +703,23 @@ onMounted(async () => {
 }
 
 .dashboard-title h2 {
-  font-size: 1.75rem;
-  font-weight: 600;
+  font-size: 2.5rem;
+  font-weight: 700;
   margin: 0;
+  background: linear-gradient(
+    135deg,
+    var(--text-primary) 0%,
+    var(--text-primary) 30%,
+    var(--color-primary) 50%,
+    var(--text-primary) 70%,
+    var(--text-primary) 100%
+  );
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: shine 4s linear infinite;
+  letter-spacing: -0.02em;
 }
 
 .filters {
@@ -801,167 +763,355 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.1);
 }
 
-.dashboard-body {
+.dashboard-content {
   flex: 1;
   overflow: auto;
   padding: 2rem;
 }
 
+.view-selector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  width: fit-content;
+  margin: 0 auto 2rem;
+}
+
+.view-btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+}
+
+.view-btn.active {
+  background: var(--color-primary);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.2);
+}
+
+.view-btn:hover:not(.active) {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.chart-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  width: fit-content;
+  margin: 0 auto;
+}
+
+.chart-select {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  min-width: 150px;
+}
+
+.single-chart-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  width: 100%;
+}
+
+.chart-card {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 20px;
+  padding: 2rem;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  min-height: 600px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  animation: slideIn 0.4s ease;
+  animation-fill-mode: both;
+  transition: all 0.3s ease;
+}
+
+.chart-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.chart-card h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-primary);
+  text-align: center;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.chart-container {
+  flex: 1;
+  min-height: 500px;
+  width: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Make the first chart (Chiffre d'affaires) span full width */
+.chart-card:first-child {
+  grid-column: 1 / -1;
+  min-height: 500px;
+}
+
+.chart-card:first-child .chart-container {
+  min-height: 400px;
+}
+
+@media (max-width: 1200px) {
+  .chart-card {
+    min-height: 400px;
+  }
+
+  .chart-card:first-child {
+    min-height: 500px;
+  }
+}
+
 .kpi-section {
-  margin-bottom: 2.5rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  animation: slideIn 0.4s ease;
+  animation-fill-mode: both;
+}
+
+.kpi-section:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.kpi-section:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.kpi-section:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.kpi-section:nth-child(4) {
+  animation-delay: 0.4s;
 }
 
 .kpi-section h3 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin-bottom: 1.5rem;
-  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 400;
+  margin-bottom: 1.25rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
 }
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
 }
 
 .kpi-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
+  background: rgba(255, 255, 255, 0.015);
+  border-radius: 16px;
+  padding: 2rem;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.02);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-}
-
-.kpi-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: rgba(var(--color-primary-rgb), 0.1);
-  border: 1px solid rgba(var(--color-primary-rgb), 0.2);
+  overflow: hidden;
+  min-height: 180px;
   display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  z-index: 1;
+}
+
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.03));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.kpi-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow:
+    0 20px 30px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  z-index: 2;
+}
+
+.kpi-header {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
+  margin-bottom: 1.5rem;
 }
 
-.kpi-icon i {
-  font-size: 1.25rem;
-  color: var(--color-primary);
-}
-
-.kpi-icon.warning {
-  background: rgba(var(--color-warning-rgb), 0.1);
-  border-color: rgba(var(--color-warning-rgb), 0.2);
-}
-
-.kpi-icon.warning i {
-  color: var(--color-warning);
-}
-
-.kpi-icon.success {
-  background: rgba(var(--color-success-rgb), 0.1);
-  border-color: rgba(var(--color-success-rgb), 0.2);
-}
-
-.kpi-icon.success i {
-  color: var(--color-success);
-}
-
-.kpi-content {
-  flex: 1;
-}
-
-.kpi-content h4 {
-  font-size: 0.9rem;
-  font-weight: 500;
+.kpi-header i {
+  font-size: 1.5rem;
   color: var(--text-secondary);
-  margin: 0 0 0.5rem;
+  opacity: 0.8;
+}
+
+.kpi-body h4 {
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin: 0 0 1rem 0;
+  opacity: 0.8;
 }
 
 .kpi-value {
-  font-size: 1.5rem;
+  font-size: 2.5rem;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
 }
 
-.loading-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
+.kpi-card.warning {
+  background: rgba(239, 68, 68, 0.03);
 }
 
-.section-content {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
+.kpi-card.warning .kpi-value {
+  color: rgb(239, 68, 68);
 }
 
-.chart-container {
-  height: 300px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 1rem;
-  position: relative;
+.kpi-card.success {
+  background: rgba(34, 197, 94, 0.03);
 }
 
-.chart-header {
-  position: relative;
-  height: 0;
-}
-
-.tooltip-wrapper {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  z-index: 1;
+.kpi-card.success .kpi-value {
+  color: rgb(34, 197, 94);
 }
 
 .info-icon {
   position: relative;
-  display: inline-block;
   cursor: help;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
 }
 
 .info-icon i {
-  color: var(--text-secondary);
   font-size: 0.9rem;
-  opacity: 0.6;
-  transition: opacity 0.2s ease;
+  color: var(--text-secondary);
+  opacity: 0.5;
+  transition: all 0.2s ease;
 }
 
 .info-icon:hover i {
-  opacity: 1;
+  opacity: 0.9;
 }
 
 .tooltip {
-  visibility: hidden;
   position: absolute;
-  right: 0;
-  top: 100%;
-  margin-top: 5px;
-  width: 300px;
-  background: rgba(0, 0, 0, 0.9);
+  top: calc(100% + 10px);
+  right: -140px;
+  width: 280px;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.95);
+  border-radius: 12px;
+  font-size: 0.9rem;
+  line-height: 1.5;
   color: white;
-  padding: 0.75rem;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  line-height: 1.4;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 9999;
   opacity: 0;
-  transform: translateY(-10px);
-  transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
-  z-index: 1000;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  transform: translateY(5px);
+  pointer-events: none;
 }
 
-.info-icon:hover .tooltip {
-  visibility: visible;
+.tooltip::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 140px;
+  width: 12px;
+  height: 12px;
+  background: rgba(0, 0, 0, 0.95);
+  transform: rotate(45deg);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tooltip.show {
   opacity: 1;
+  visibility: visible;
   transform: translateY(0);
+}
+
+.kpi-evolution {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  width: fit-content;
+}
+
+.evolution-positive {
+  color: rgb(34, 197, 94);
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.evolution-negative {
+  color: rgb(239, 68, 68);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+@keyframes shine {
+  to {
+    background-position: 200% center;
+  }
 }
 
 @media (max-width: 768px) {
@@ -981,7 +1131,7 @@ onMounted(async () => {
     gap: 1rem;
   }
 
-  .dashboard-body {
+  .dashboard-content {
     padding: 1rem;
   }
 
@@ -989,4 +1139,4 @@ onMounted(async () => {
     grid-template-columns: 1fr;
   }
 }
-</style> 
+</style>

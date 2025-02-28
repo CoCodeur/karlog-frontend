@@ -1,5 +1,6 @@
 import { UserRole, type User } from '../types/auth'
 import authService from './auth.service'
+import api from './api.service'
 
 interface NewUser {
   first_name: string
@@ -26,7 +27,7 @@ class UserService {
 
   public updateUserInCache(userId: string, updates: Partial<User>) {
     const users = this.getFromCache()
-    const userIndex = users.findIndex(u => u.id === userId)
+    const userIndex = users.findIndex((u) => u.id === userId)
     if (userIndex !== -1) {
       users[userIndex] = { ...users[userIndex], ...updates }
       this.saveToCache(users)
@@ -35,23 +36,11 @@ class UserService {
 
   async fetchUsers(): Promise<User[]> {
     try {
-      const token = authService.getAccessToken()
       const user = authService.getUser()
-      if (!token || !user?.company_id) throw new Error('Non authentifié')
+      if (!user?.company_id) throw new Error('Non authentifié')
 
-      const response = await fetch(`/api/users/company/${user.company_id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      })
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de la récupération des utilisateurs')
-      }
-
-      const data = await response.json()
-      const users =
-        data.users && Array.isArray(data.users) ? data.users : Array.isArray(data) ? data : []
+      const response = await api.get(`/users/company/${user.company_id}`)
+      const users = response.data.users || []
 
       // Sauvegarder dans le cache
       this.saveToCache(users)
@@ -89,24 +78,8 @@ class UserService {
 
   async associateCard(userId: string, cardUid: string): Promise<User> {
     try {
-      const token = authService.getAccessToken()
-      if (!token) throw new Error('Non authentifié')
-
-      const response = await fetch(`/api/users/${userId}/associate-card`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ card_uid: cardUid })
-      })
-
-      if (!response.ok) {
-        throw new Error("Erreur lors de l'association de la carte")
-      }
-
-      const data = await response.json()
-      const updatedUser = data.user // Extraire l'utilisateur de la réponse
+      const response = await api.patch(`/users/${userId}/associate-card`, { card_uid: cardUid })
+      const updatedUser = response.data.user
 
       // Mettre à jour le cache
       const users = this.getFromCache()
@@ -127,22 +100,8 @@ class UserService {
 
   async dissociateCard(userId: string): Promise<User> {
     try {
-      const token = authService.getAccessToken()
-      if (!token) throw new Error('Non authentifié')
-
-      const response = await fetch(`/api/users/${userId}/dissociate-card`, {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      })
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de la dissociation de la carte')
-      }
-
-      const data = await response.json()
-      const updatedUser = data.user // Extraire l'utilisateur de la réponse
+      const response = await api.patch(`/users/${userId}/dissociate-card`)
+      const updatedUser = response.data.user
 
       // Mettre à jour le cache
       const users = this.getFromCache()
@@ -171,25 +130,22 @@ class UserService {
   }
 
   async createUser(userData: NewUser): Promise<User> {
-    const token = authService.getAccessToken()
-    if (!token) throw new Error('Non authentifié')
-
-    const response = await fetch('/api/users', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(userData)
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || "Erreur lors de la création de l'utilisateur")
+    try {
+      const response = await api.post('/users', userData)
+      return response.data.user
+    } catch (error) {
+      console.error('Erreur:', error)
+      throw error
     }
+  }
 
-    const data = await response.json()
-    return data.user // Retourner l'utilisateur de la réponse
+  async deleteUser(userId: string): Promise<void> {
+    try {
+      await api.delete(`/users/${userId}`)
+    } catch (error) {
+      console.error('Erreur:', error)
+      throw error
+    }
   }
 }
 

@@ -1,6 +1,7 @@
 import type { AuthResponse, LoginCredentials, User } from '../types/auth'
 import garageService from './garage.service'
 import api from './api.service'
+import { analyticsService } from './analytics.service'
 
 class AuthService {
   private static instance: AuthService
@@ -70,6 +71,7 @@ class AuthService {
     sessionStorage.removeItem(this.storageKeys.REFRESH_TOKEN)
     sessionStorage.removeItem(this.storageKeys.USER)
     garageService.clearGarages()
+    analyticsService.clearCache()
   }
 
   getAccessToken(): string | null {

@@ -23,19 +23,37 @@ export interface SimulationKPI {
   gain_if_20_percent_fewer_cancellations: number
 }
 
+//interface Evolution {
+//  chiffre_affaires_total: number
+//  rentabilite: number
+//  taux_retard: number
+//  taux_annulation: number
+//  perte_estimee: number
+//  revenu_moyen_par_tache: number
+//}
+
 export interface AnalyticsPeriod {
   date: string
   processing_timestamp: string
-  financial_kpi: FinancialKPI
-  lost_revenue_kpi: LostRevenueKPI
-  optimization_kpi: OptimizationKPI
-  simulation_kpi: SimulationKPI
+  chiffre_affaires_total: number
+  rentabilite: number
+  taux_retard: number
+  taux_annulation: number
+  perte_estimee: number
+  revenu_moyen_par_tache: number
+  evolution: {
+    chiffre_affaires_total: number
+    rentabilite: number
+    taux_retard: number
+    taux_annulation: number
+    perte_estimee: number
+    revenu_moyen_par_tache: number
+  }
 }
 
 export interface GarageAnalytics {
+  id: string
   garage_id: string
-  garage_name: string
-  company_id: string
   monthly_analytics: AnalyticsPeriod[]
   yearly_analytics: AnalyticsPeriod[]
-} 
+}

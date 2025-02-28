@@ -11,29 +11,29 @@ const { showToast, toastMessage, toastType } = useToast()
     <router-view />
     <StatusBar />
   </div>
-  <Toaster 
-    v-if="showToast"
-    :message="toastMessage"
-    :type="toastType"
-    :duration="3000"
-  />
+  <Toaster v-if="showToast" :message="toastMessage" :type="toastType" :duration="3000" />
 </template>
 
 <style>
 :root {
-  --color-primary: #8957E5;
-  --color-primary-hover: #7B4FCC;
-  --color-primary-light: #A37EE8;
-  --text-primary: #FFFFFF;
+  --color-primary: #8957e5;
+  --color-primary-hover: #7b4fcc;
+  --color-primary-light: #a37ee8;
+  --text-primary: #ffffff;
   --text-secondary: rgba(255, 255, 255, 0.7);
-  --status-error: #FF4D4D;
+  --status-error: #ff4d4d;
   --glass-morph-background: rgba(255, 255, 255, 0.05);
   --glass-morph-backdrop-filter: blur(12px);
   --glass-morph-border: 1px solid rgba(255, 255, 255, 0.1);
   --glass-morph-box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   --glass-background: rgba(255, 255, 255, 0.05);
   --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-shine: linear-gradient(120deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0) 70%);
+  --glass-shine: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0) 30%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0) 70%
+  );
 }
 
 body {
@@ -42,11 +42,14 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
-  background: 
-    radial-gradient(circle at 100% 0%, rgba(137, 87, 229, 0.15) 0%, transparent 50%),
+  background: radial-gradient(circle at 100% 0%, rgba(137, 87, 229, 0.15) 0%, transparent 50%),
     radial-gradient(circle at 0% 100%, rgba(137, 87, 229, 0.15) 0%, transparent 50%),
-    linear-gradient(135deg, #1F1F1F 0%, #2D2B42 100%);
-  font-family: Inter, system-ui, -apple-system, sans-serif;
+    linear-gradient(135deg, #1f1f1f 0%, #2d2b42 100%);
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    sans-serif;
   color: var(--text-primary);
 }
 
@@ -79,7 +82,7 @@ body {
   border: var(--glass-morph-border);
   box-shadow: var(--glass-morph-box-shadow);
   border-radius: 16px;
-  position: relative;  
+  position: relative;
   overflow: hidden;
 }
 

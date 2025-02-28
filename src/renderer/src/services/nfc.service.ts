@@ -21,7 +21,6 @@ class NFCService {
 
       // Écoute des changements d'état du lecteur
       window.api.nfc.onReaderStatus((connected: boolean) => {
-        console.log('Reader status changed:', connected)
         this.isConnectedRef.value = connected
         if (!connected) {
           this.lastCardUUID.value = null
@@ -40,7 +39,6 @@ class NFCService {
 
       // Vérification initiale et périodique de l'état du lecteur
       const checkReader = () => {
-        console.log('Checking reader status...')
         window.api.nfc.checkReader()
       }
 

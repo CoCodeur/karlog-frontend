@@ -1,5 +1,5 @@
 appId: com.electron.app
-productName: karlog-frontend
+productName: karlog
 directories:
   buildResources: build
 files:
@@ -9,15 +9,32 @@ files:
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+asar: true
 asarUnpack:
   - resources/**
+  - node_modules/@pokusew/pcsclite/**/*
+  - node_modules/nfc-pcsc/**/*
+  - node_modules/serialport/**/*
 win:
-  executableName: karlog-frontend
+  executableName: karlog
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+  forceCodeSigning: false
+
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+  createStartMenuShortcut: true
+  deleteAppDataOnUninstall: true
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
 mac:
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:

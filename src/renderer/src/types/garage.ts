@@ -10,6 +10,7 @@ export interface Garage {
   name: string
   address: Address
   company_id: string
+  service_account_email?: string
 }
 
 export interface NewGarage {

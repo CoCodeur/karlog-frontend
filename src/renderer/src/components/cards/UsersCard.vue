@@ -60,12 +60,16 @@
                     </button>
                   </td>
                   <td class="action-cell">
-                    <button 
-                      class="action-btn delete-btn" 
-                      @click="deleteUser(user)"
+                    <button
+                      class="action-btn delete-btn"
                       :disabled="user.role === UserRole.SERVICE_ACCOUNT"
-                      :class="{ 'disabled': user.role === UserRole.SERVICE_ACCOUNT }"
-                      :title="user.role === UserRole.SERVICE_ACCOUNT ? 'Les comptes de service ne peuvent pas être supprimés' : ''"
+                      :class="{ disabled: user.role === UserRole.SERVICE_ACCOUNT }"
+                      :title="
+                        user.role === UserRole.SERVICE_ACCOUNT
+                          ? 'Les comptes de service ne peuvent pas être supprimés'
+                          : ''
+                      "
+                      @click="deleteUser(user)"
                     >
                       <i class="fas fa-trash"></i>
                       Supprimer
@@ -286,12 +290,13 @@ const normalizeString = (str: string): string => {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(' ', '-')
 }
 
 const generateEmail = (): string | null => {
   const { first_name, last_name } = newUser.value
   const user = authService.getUser()
-  
+
   if (!first_name || !last_name || !user?.company_name) {
     return null
   }
@@ -304,7 +309,8 @@ const generateEmail = (): string | null => {
 }
 
 const updateEmail = () => {
-  if (newUser.value.role < 2) { // Seulement pour les non-administrateurs
+  if (newUser.value.role < 2) {
+    // Seulement pour les non-administrateurs
     const email = generateEmail()
     if (email) {
       newUser.value.email = email
@@ -322,7 +328,7 @@ const prepareUserData = (): NewUser => {
   if (newUser.value.role < 2) {
     const email = generateEmail()
     if (!email) {
-      throw new Error('Impossible de générer l\'email')
+      throw new Error("Impossible de générer l'email")
     }
     newUser.value.email = email
   }
@@ -343,17 +349,18 @@ const createUser = async () => {
   try {
     const userData = prepareUserData()
     const response = await userService.createUser(userData)
-    
+
     // Mettre à jour la liste des utilisateurs et le cache
     const updatedUsers = [...users.value, response]
     users.value = updatedUsers
     userService.saveToCache(updatedUsers)
-    
+
     showToast('Utilisateur créé avec succès', 'success')
     closeCreateModal()
   } catch (error) {
     console.error('Erreur:', error)
-    const message = error instanceof Error ? error.message : "Erreur lors de la création de l'utilisateur"
+    const message =
+      error instanceof Error ? error.message : "Erreur lors de la création de l'utilisateur"
     showToast(message, 'error')
   }
 }
@@ -370,20 +377,7 @@ const dissociateCard = async (user: User) => {
 
 const deleteUser = async (user: User) => {
   try {
-    const token = authService.getAccessToken()
-    if (!token) throw new Error('Non authentifié')
-
-    const response = await fetch(`/api/users/${user.id}`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    })
-
-    if (!response.ok) {
-      throw new Error("Erreur lors de la suppression de l'utilisateur")
-    }
-
+    await userService.deleteUser(user.id)
     users.value = users.value.filter((u) => u.id !== user.id)
     userService.saveToCache(users.value) // Mettre à jour le cache
     showToast('Utilisateur supprimé avec succès', 'success')

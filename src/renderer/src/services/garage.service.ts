@@ -5,19 +5,15 @@ import authService from './auth.service'
 
 class GarageService {
   private static instance: GarageService
-  private readonly storageKey = 'garages'
+  //private readonly storageKey = 'garages'
   private garages: Garage[] = []
   private readonly CACHE_KEY = 'garages_cache'
 
   private constructor() {
-    // Charger les garages depuis le sessionStorage au démarrage
-    const storedGarages = sessionStorage.getItem(this.storageKey)
-    if (storedGarages) {
-      try {
-        this.garages = JSON.parse(storedGarages)
-      } catch (error) {
-        console.error('Error parsing stored garages:', error)
-      }
+    // Charger les garages depuis le localStorage
+    const cached = localStorage.getItem(this.CACHE_KEY)
+    if (cached) {
+      this.garages = JSON.parse(cached)
     }
   }
 
@@ -32,8 +28,7 @@ class GarageService {
     try {
       const response = await api.get(`/garages/company/${company_id}`)
       this.garages = response.data.garages
-      // Sauvegarder les garages dans le sessionStorage
-      sessionStorage.setItem(this.storageKey, JSON.stringify(this.garages))
+      this.saveToCache(this.garages)
       return this.garages
     } catch (error) {
       console.error('Error fetching garages:', error)
@@ -47,20 +42,21 @@ class GarageService {
 
   clearGarages(): void {
     this.garages = []
-    sessionStorage.removeItem(this.storageKey)
+    this.clearCache()
   }
 
   public saveToCache(garages: Garage[]) {
+    this.garages = garages
     localStorage.setItem(this.CACHE_KEY, JSON.stringify(garages))
   }
 
   public getFromCache(): Garage[] {
-    const cached = localStorage.getItem(this.CACHE_KEY)
-    return cached ? JSON.parse(cached) : []
+    return this.garages
   }
 
   public clearCache(): void {
     localStorage.removeItem(this.CACHE_KEY)
+    this.garages = []
   }
 
   async fetchGarages(): Promise<Garage[]> {
@@ -70,10 +66,7 @@ class GarageService {
 
       const response = await api.get(`/garages/company/${user.company_id}`)
       const garages = response.data.garages || []
-
-      // Sauvegarder dans le cache
       this.saveToCache(garages)
-
       return garages
     } catch (error) {
       console.error('Erreur:', error)
@@ -82,29 +75,37 @@ class GarageService {
   }
 
   async getGaragess(): Promise<Garage[]> {
-    const cachedGarages = this.getFromCache()
-    if (cachedGarages.length === 0) {
+    if (this.garages.length === 0) {
       return this.fetchGarages()
     }
-    return cachedGarages
+    return this.garages
   }
 
-  async createGarage(garageData: NewGarage): Promise<GarageCreateResponse> {
+  async createGarage(newGarage: NewGarage): Promise<GarageCreateResponse> {
     try {
-      const response = await api.post('/garages', garageData)
-      return response.data
+      const response = await api.post('/garages', newGarage)
+      const createdGarage = response.data
+      // On met à jour le cache avec le nouveau garage qui inclut l'email du compte de service
+      const updatedGarages = [...this.garages, createdGarage.garage]
+      this.saveToCache(updatedGarages)
+      return createdGarage
     } catch (error) {
-      console.error('Erreur lors de la création du garage:', error)
+      console.error('Error creating garage:', error)
       throw error
     }
   }
 
-  async updateGarage(id: string, garageData: UpdateGarage): Promise<Garage> {
+  async updateGarage(id: string, updateData: UpdateGarage): Promise<Garage> {
     try {
-      const response = await api.patch(`/garages/${id}`, garageData)
-      return response.data.garage
+      const response = await api.put(`/garages/${id}`, updateData)
+      const updatedGarage = response.data.garage
+      const updatedGarages = this.garages.map(g => 
+        g.id === id ? { ...g, ...updatedGarage } : g
+      )
+      this.saveToCache(updatedGarages)
+      return updatedGarage
     } catch (error) {
-      console.error('Erreur lors de la modification du garage:', error)
+      console.error('Error updating garage:', error)
       throw error
     }
   }
@@ -112,11 +113,10 @@ class GarageService {
   async deleteGarage(id: string): Promise<void> {
     try {
       await api.delete(`/garages/${id}`)
-      // Mettre à jour le cache
-      const garages = this.getFromCache()
-      this.saveToCache(garages.filter(garage => garage.id !== id))
+      const updatedGarages = this.garages.filter(g => g.id !== id)
+      this.saveToCache(updatedGarages)
     } catch (error) {
-      console.error('Erreur lors de la suppression du garage:', error)
+      console.error('Error deleting garage:', error)
       throw error
     }
   }

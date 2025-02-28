@@ -5,55 +5,58 @@ import icon from '../../resources/icon.png?asset'
 import { nfcManager } from './nfc'
 
 function createWindow(): void {
+  console.log('Mode:', process.env.NODE_ENV)
+  console.log('API URL:', process.env.VITE_API_URL)
+  
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+    width: 1280,
+    height: 800,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
+      devTools: true,
       webSecurity: true,
       contextIsolation: true,
       nodeIntegration: false
     }
   })
 
-  if (is.dev) {
-    // Désactiver la CSP en développement
-    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-      callback({
-        responseHeaders: {
-          ...details.responseHeaders,
-          'Content-Security-Policy': ['']
-        }
-      })
+  // CSP en production avec autorisation de l'API externe
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    const apiUrl = process.env['VITE_API_URL'] || 'http://91.108.122.35:3000'
+    console.log('🔒 Configuration CSP :', {
+      mode: process.env.NODE_ENV,
+      apiUrl: apiUrl
     })
-  } else {
-    // CSP stricte en production
-    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-      callback({
-        responseHeaders: {
-          ...details.responseHeaders,
-          'Content-Security-Policy': [
-            "default-src 'self'",
-            "script-src 'self'",
-            "style-src 'self' 'unsafe-inline'",
-            "font-src 'self' data:",
-            "img-src 'self' data:",
-            "connect-src 'self'"
-          ].join('; ')
-        }
-      })
+
+    const headers = {
+      ...details.responseHeaders,
+      'Content-Security-Policy': [
+        "default-src 'self'",
+        "script-src 'self'",
+        "style-src 'self' 'unsafe-inline'",
+        "font-src 'self' data:",
+        "img-src 'self' data:",
+        `connect-src 'self' ${apiUrl}`
+      ].join('; ')
+    }
+    console.log('🚀 Headers CSP appliqués :', {
+      csp: headers['Content-Security-Policy']
     })
-  }
+
+    callback({ responseHeaders: headers })
+  })
 
   // Set up NFC manager with the main window
   nfcManager.setMainWindow(mainWindow)
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
+    // Ouvrir les DevTools au démarrage
+    mainWindow.webContents.openDevTools()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -61,9 +64,10 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
-  // Chargement de l'URL (dev) ou du fichier local (prod)
-  if (is.dev && process.env.ELECTRON_RENDERER_URL) {
-    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
+  // HMR for renderer base on electron-vite cli.
+  // Load the remote URL for development or the local html file for production.
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }

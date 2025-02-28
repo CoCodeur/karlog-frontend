@@ -151,29 +151,12 @@ const handleSubmit = async () => {
       throw new Error('Veuillez sélectionner un garage')
     }
 
-    const token = authService.getAccessToken()
-    if (!token) {
-      throw new Error('Non authentifié')
+    const taskData = {
+      ...formData.value,
+      garage_id: isAdmin.value ? selectedGarageId.value : user.value?.garage_id
     }
 
-    const response = await fetch('/api/tasks', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        ...formData.value,
-        garage_id: isAdmin.value ? selectedGarageId.value : user.value?.garage_id
-      })
-    })
-
-    if (!response.ok) {
-      const data = await response.json()
-      throw new Error(data.message || 'Erreur lors de la création de la tâche')
-    }
-
-    const data = await response.json()
+    const data = await taskService.createTask(taskData)
     // Mettre à jour le cache avec la nouvelle tâche
     taskService.updateTaskInCache(data.task)
 

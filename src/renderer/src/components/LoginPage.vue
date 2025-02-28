@@ -29,8 +29,8 @@
           <button
             type="button"
             class="visibility-button"
-            @click="showPassword = !showPassword"
             :disabled="isLoading"
+            @click="showPassword = !showPassword"
           >
             <i class="fas" :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
           </button>
@@ -78,6 +78,7 @@ const handleSubmit = async () => {
 
     await authService.login(credentials)
     router.push('/')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error('Login error:', error)
     if (error.response?.status === 401) {
@@ -85,7 +86,8 @@ const handleSubmit = async () => {
     } else if (error.response?.data?.message) {
       loginError.value = error.response.data.message
     } else if (error.message) {
-      loginError.value = error.message
+      const err = error as Error
+      loginError.value = JSON.stringify(err)
     } else {
       loginError.value = 'Une erreur est survenue lors de la connexion'
     }

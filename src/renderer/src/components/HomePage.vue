@@ -57,7 +57,7 @@ onMounted(async () => {
     try {
       company.value = await companyService.fetchCompany(user.value.company_id)
     } catch (error) {
-      console.error('Erreur lors du chargement de l\'entreprise:', error)
+      console.error("Erreur lors du chargement de l'entreprise:", error)
     }
   }
   // Charger les tâches actives au démarrage
@@ -81,7 +81,8 @@ const refreshTasks = async () => {
 </script>
 
 <style>
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   height: 100vh;
@@ -318,7 +319,8 @@ html, body {
     font-size: 1.5rem;
   }
 
-  .user-info, .logout-btn {
+  .user-info,
+  .logout-btn {
     width: 100%;
     justify-content: center;
   }

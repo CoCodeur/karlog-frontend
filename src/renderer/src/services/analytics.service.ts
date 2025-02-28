@@ -1,39 +1,45 @@
 import type { GarageAnalytics } from '../types/analytics'
 import authService from './auth.service'
+import api from './api.service'
 
 class AnalyticsService {
   private readonly CACHE_KEY = 'analytics_cache'
+  private readonly COMPANY_ID_CACHE_KEY = 'analytics_company_id'
 
   public saveToCache(analytics: GarageAnalytics[]) {
-    localStorage.setItem(this.CACHE_KEY, JSON.stringify(analytics))
+    const user = authService.getUser()
+    if (user?.company_id) {
+      localStorage.setItem(this.CACHE_KEY, JSON.stringify(analytics))
+      localStorage.setItem(this.COMPANY_ID_CACHE_KEY, user.company_id)
+    }
   }
 
   public getFromCache(): GarageAnalytics[] {
     const cached = localStorage.getItem(this.CACHE_KEY)
-    return cached ? JSON.parse(cached) : []
+    const cachedCompanyId = localStorage.getItem(this.COMPANY_ID_CACHE_KEY)
+    const user = authService.getUser()
+
+    // Si l'ID de l'entreprise dans le cache ne correspond pas à l'utilisateur actuel,
+    // on retourne un tableau vide pour forcer un nouveau chargement
+    if (!cached || !cachedCompanyId || cachedCompanyId !== user?.company_id) {
+      return []
+    }
+
+    return JSON.parse(cached)
   }
 
   public clearCache(): void {
     localStorage.removeItem(this.CACHE_KEY)
+    localStorage.removeItem(this.COMPANY_ID_CACHE_KEY)
   }
 
   async fetchAnalytics(): Promise<GarageAnalytics[]> {
     try {
-      const token = authService.getAccessToken()
       const user = authService.getUser()
-      if (!token || !user?.company_id) throw new Error('Non authentifié')
+      if (!user?.company_id) throw new Error('Non authentifié')
 
-      const response = await fetch(`/api/analytics/company/${user.company_id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      })
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de la récupération des analytics')
-      }
-
-      const analytics = await response.json()
+      const response = await api.get(`/analytics/company/${user.company_id}`)
+      const analytics = response.data
       this.saveToCache(analytics)
       return analytics
     } catch (error) {
@@ -51,4 +57,4 @@ class AnalyticsService {
   }
 }
 
-export const analyticsService = new AnalyticsService() 
+export const analyticsService = new AnalyticsService()

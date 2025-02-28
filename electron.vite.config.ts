@@ -12,7 +12,13 @@ export default defineConfig({
         }
       }
     },
-    envPrefix: ['VITE_', 'ELECTRON_']
+    envPrefix: ['VITE_', 'ELECTRON_'],
+    define: {
+      'process.env.VITE_API_URL':
+        process.env.NODE_ENV === 'development'
+          ? JSON.stringify('http://0.0.0.0:3000')
+          : JSON.stringify('http://91.108.122.35:3000')
+    }
   },
   preload: {
     plugins: [externalizeDepsPlugin()],
@@ -36,6 +42,12 @@ export default defineConfig({
         }
       }
     },
-    envPrefix: ['VITE_', 'ELECTRON_']
+    envPrefix: ['VITE_', 'ELECTRON_'],
+    define: {
+      'process.env.VITE_API_URL':
+        process.env.NODE_ENV === 'development'
+          ? JSON.stringify('http://0.0.0.0:3000')
+          : JSON.stringify('http://91.108.122.35:3000')
+    }
   }
 })
