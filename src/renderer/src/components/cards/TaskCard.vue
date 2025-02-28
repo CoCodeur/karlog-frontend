@@ -245,7 +245,7 @@ const handleSubmit = async () => {
 }
 
 .card-form {
-  padding: 1rem 1.25rem 1.25rem;
+  padding: 1rem;
 }
 
 .form-grid {
@@ -259,6 +259,7 @@ const handleSubmit = async () => {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  width: 100%;
 }
 
 .span-full {
@@ -269,9 +270,11 @@ const handleSubmit = async () => {
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--text-secondary);
+  margin-bottom: 0.15rem;
 }
 
 .form-input, .form-select {
+  width: 100%;
   padding: 0.6rem 0.75rem;
   height: 38px;
 }
@@ -349,21 +352,27 @@ const handleSubmit = async () => {
 .select-wrapper {
   position: relative;
   width: 100%;
-  height: 38px;
 }
 
 .form-select {
   width: 100%;
   appearance: none;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.05) !important;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   padding: 0.6rem 0.75rem;
   padding-right: 2.5rem;
-  color: var(--text-primary);
+  color: var(--text-primary) !important;
   font-size: 0.875rem;
   transition: all 0.2s ease;
   cursor: pointer;
+  backdrop-filter: blur(12px);
+}
+
+.form-select option {
+  background: rgba(13, 17, 23, 0.95) !important;
+  color: var(--text-primary) !important;
+  padding: 0.75rem;
 }
 
 .form-select:hover {
@@ -373,7 +382,7 @@ const handleSubmit = async () => {
 .form-select:focus {
   outline: none;
   border-color: var(--color-primary);
-  background: rgba(var(--color-primary-rgb), 0.05);
+  background: rgba(255, 255, 255, 0.08) !important;
 }
 
 .select-icon {

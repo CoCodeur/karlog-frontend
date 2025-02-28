@@ -5,8 +5,6 @@ import icon from '../../resources/icon.png?asset'
 import { nfcManager } from './nfc'
 
 function createWindow(): void {
-  console.log('Mode:', process.env.NODE_ENV)
-  console.log('API URL:', process.env.VITE_API_URL)
   
   const mainWindow = new BrowserWindow({
     width: 1280,
@@ -17,7 +15,7 @@ function createWindow(): void {
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
-      devTools: true,
+      devTools: is.dev,
       webSecurity: true,
       contextIsolation: true,
       nodeIntegration: false
@@ -27,10 +25,6 @@ function createWindow(): void {
   // CSP en production avec autorisation de l'API externe
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     const apiUrl = process.env['VITE_API_URL'] || 'http://91.108.122.35:3000'
-    console.log('🔒 Configuration CSP :', {
-      mode: process.env.NODE_ENV,
-      apiUrl: apiUrl
-    })
 
     const headers = {
       ...details.responseHeaders,
@@ -40,12 +34,9 @@ function createWindow(): void {
         "style-src 'self' 'unsafe-inline'",
         "font-src 'self' data:",
         "img-src 'self' data:",
-        `connect-src 'self' ${apiUrl}`
+        `connect-src 'self' ${apiUrl} https://fonts.googleapis.com https://fonts.gstatic.com`
       ].join('; ')
     }
-    console.log('🚀 Headers CSP appliqués :', {
-      csp: headers['Content-Security-Policy']
-    })
 
     callback({ responseHeaders: headers })
   })
@@ -55,8 +46,10 @@ function createWindow(): void {
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
-    // Ouvrir les DevTools au démarrage
-    mainWindow.webContents.openDevTools()
+    // Ouvrir les DevTools uniquement en développement
+    if (is.dev) {
+      mainWindow.webContents.openDevTools()
+    }
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {

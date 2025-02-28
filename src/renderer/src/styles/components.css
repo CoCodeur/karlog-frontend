@@ -74,6 +74,38 @@
   background: rgba(var(--color-primary-rgb), 0.05);
 }
 
+/* Select inputs */
+select {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: var(--text-primary) !important;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  backdrop-filter: blur(12px);
+}
+
+select option {
+  background: rgba(13, 17, 23, 0.95) !important;
+  color: var(--text-primary) !important;
+  padding: 0.75rem;
+}
+
+select:hover {
+  border-color: rgba(var(--color-primary-rgb), 0.3);
+}
+
+select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
 /* Cards */
 .card {
   background: rgba(255, 255, 255, 0.05);

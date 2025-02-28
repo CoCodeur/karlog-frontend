@@ -10,11 +10,11 @@
                 <select v-model="selectedGarageId" class="filter-select">
                   <option value="">Tous les garages</option>
                   <option
-                    v-for="garage in analytics"
-                    :key="garage.garage_id"
-                    :value="garage.garage_id"
+                    v-for="garage in garages"
+                    :key="garage.id"
+                    :value="garage.id"
                   >
-                    Garage {{ garage.garage_id }}
+                    {{ garage.name }}
                   </option>
                 </select>
               </div>
@@ -140,7 +140,9 @@ import { useToast } from '../../composables/useToast'
 import type { AnalyticsPeriod } from '../../types/analytics'
 import { formatCurrency, formatPercent } from '../../utils/formatters'
 import { analyticsService } from '../../services/analytics.service'
+import garageService from '../../services/garage.service'
 import type { GarageAnalytics } from '../../types/analytics'
+import type { Garage } from '../../types/garage'
 
 const props = defineProps<{
   isModalOpen: boolean
@@ -154,6 +156,7 @@ const { show: showToast } = useToast()
 
 const loading = ref(false)
 const analytics = ref<GarageAnalytics[]>([])
+const garages = ref<Garage[]>([])
 const selectedGarageId = ref('')
 const periodType = ref('monthly')
 const selectedMonth = ref(new Date().toISOString().slice(0, 7))
@@ -377,15 +380,18 @@ const closeModal = () => {
   emit('close')
 }
 
-const fetchAnalytics = async () => {
+const fetchData = async () => {
   try {
     loading.value = true
-    console.log('Fetching analytics data...')
-    analytics.value = await analyticsService.getAnalytics()
-    console.log('Analytics data received:', analytics.value)
+    const [analyticsData, garagesData] = await Promise.all([
+      analyticsService.getAnalytics(),
+      garageService.getGaragess()
+    ])
+    analytics.value = analyticsData
+    garages.value = garagesData
   } catch (error) {
-    console.error('Erreur lors du chargement des analytics:', error)
-    showToast('Erreur lors du chargement des analytics', 'error')
+    console.error('Erreur lors du chargement des données:', error)
+    showToast('Erreur lors du chargement des données', 'error')
   } finally {
     loading.value = false
   }
@@ -616,9 +622,8 @@ onBeforeUnmount(() => {
 })
 
 onMounted(async () => {
-  console.log('DashboardCard mounted, isModalOpen:', props.isModalOpen)
   if (props.isModalOpen) {
-    await fetchAnalytics()
+    await fetchData()
   }
 })
 
@@ -735,14 +740,58 @@ const getEvolutionIcon = (value: number, isWarning = false): string => {
   gap: 0.5rem;
 }
 
-.filter-select {
-  padding: 0.5rem 1rem;
+.filter-select, .chart-select {
+  width: 100%;
+  padding: 0.6rem 0.75rem 0.6rem 2.25rem;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
-  font-size: 0.95rem;
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--text-primary) !important;
+  font-size: 0.9rem;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(12px);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
   min-width: 150px;
+  height: 42px;
+}
+
+/* Styles spécifiques pour l'input de type month */
+input[type="month"].filter-select {
+  color-scheme: dark;
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+input[type="month"].filter-select::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(200%);
+  opacity: 0.9;
+  cursor: pointer;
+  background-color: transparent;
+}
+
+input[type="month"].filter-select::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+.filter-select option, .chart-select option {
+  background: rgba(13, 17, 23, 0.95) !important;
+  color: var(--text-primary) !important;
+  padding: 1rem !important;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+}
+
+.filter-select:hover, .chart-select:hover {
+  border-color: rgba(var(--color-primary-rgb), 0.3);
+}
+
+.filter-select:focus, .chart-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.2);
 }
 
 .close-btn {
@@ -821,16 +870,6 @@ const getEvolutionIcon = (value: number, isWarning = false): string => {
   border: 1px solid rgba(255, 255, 255, 0.05);
   width: fit-content;
   margin: 0 auto;
-}
-
-.chart-select {
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
-  font-size: 0.95rem;
-  min-width: 150px;
 }
 
 .single-chart-container {

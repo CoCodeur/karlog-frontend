@@ -28,12 +28,10 @@ class NFCService {
       })
 
       window.api.nfc.onCardDetected((uuid: string) => {
-        console.log('Card detected:', uuid)
         this.lastCardUUID.value = uuid
       })
 
       window.api.nfc.onCardRemoved(() => {
-        console.log('Card removed')
         this.lastCardUUID.value = null
       })
 

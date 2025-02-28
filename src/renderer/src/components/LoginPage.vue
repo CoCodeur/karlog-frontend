@@ -85,10 +85,16 @@ const handleSubmit = async () => {
       loginError.value = 'Email ou mot de passe incorrect'
     } else if (error.response?.data?.message) {
       loginError.value = error.response.data.message
-    } else if (error.message) {
+    } 
+    else if(error.message === 'No refresh token available'){
+      loginError.value = 'Email ou mot de passe incorrect'
+    }
+    
+    else if (error.message) {
       const err = error as Error
       loginError.value = JSON.stringify(err)
-    } else {
+    } 
+    else {
       loginError.value = 'Une erreur est survenue lors de la connexion'
     }
   } finally {

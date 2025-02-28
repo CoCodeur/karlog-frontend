@@ -73,7 +73,6 @@ const handleLogout = () => {
 }
 
 const refreshTasks = async () => {
-  console.log('Rafraîchissement des tâches...', activeTasksCard.value)
   if (activeTasksCard.value) {
     await activeTasksCard.value.fetchTasks()
   }

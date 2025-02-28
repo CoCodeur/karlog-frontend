@@ -236,7 +236,6 @@ const handleCardDetected = async (uid: string) => {
         if (activeUserTask) {
           activeTask.value = activeUserTask
           activeTaskRecord.value = user.record_task_id
-          console.log('Tâche active trouvée:', activeUserTask)
         }
       } else {
         // Réinitialiser si aucune tâche active
@@ -308,7 +307,6 @@ const startTask = async () => {
 
     showToast('Tâche démarrée avec succès', 'success')
     closeTaskModal()
-    console.log('Émission de l\'événement taskUpdated')
     emit('taskUpdated')
   } catch (error) {
     console.error('Erreur:', error)
@@ -329,11 +327,6 @@ const stopTask = async () => {
       return
     }
 
-    console.log('Arrêt de la tâche:', {
-      taskId: lastUser.value.task_id,
-      recordId: lastUser.value.record_task_id
-    })
-
     await taskService.stopTask(lastUser.value.task_id, lastUser.value.record_task_id)
 
     // Mettre à jour le cache des tâches
@@ -352,7 +345,6 @@ const stopTask = async () => {
     }
 
     showToast('Tâche terminée avec succès', 'success')
-    console.log('Émission de l\'événement taskUpdated après arrêt')
     emit('taskUpdated')
   } catch (error) {
     console.error('Erreur:', error)
@@ -610,25 +602,35 @@ onMounted(async () => {
   color: var(--text-primary);
 }
 
-.user-select {
+.user-select, .task-select {
   width: 100%;
   padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.05) !important;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  color: var(--text-primary);
+  color: var(--text-primary) !important;
   font-size: 1rem;
   transition: all 0.2s ease;
+  backdrop-filter: blur(12px);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
 }
 
-.user-select:hover {
+.user-select option, .task-select option {
+  background: rgba(13, 17, 23, 0.95) !important;
+  color: var(--text-primary) !important;
+  padding: 0.75rem;
+}
+
+.user-select:hover, .task-select:hover {
   border-color: rgba(var(--color-primary-rgb), 0.3);
 }
 
-.user-select:focus {
+.user-select:focus, .task-select:focus {
   outline: none;
   border-color: var(--color-primary);
-  background: rgba(var(--color-primary-rgb), 0.1);
+  background: rgba(255, 255, 255, 0.08) !important;
 }
 
 .modal-actions {
@@ -727,27 +729,6 @@ onMounted(async () => {
 .stop-btn:hover {
   background: var(--color-danger-hover);
   transform: translateY(-1px);
-}
-
-.task-select {
-  width: 100%;
-  padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  color: var(--text-primary);
-  font-size: 1rem;
-  transition: all 0.2s ease;
-}
-
-.task-select:hover {
-  border-color: rgba(var(--color-primary-rgb), 0.3);
-}
-
-.task-select:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  background: rgba(var(--color-primary-rgb), 0.1);
 }
 
 .dissociate-btn {

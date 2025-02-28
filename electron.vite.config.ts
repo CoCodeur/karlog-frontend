@@ -16,7 +16,7 @@ export default defineConfig({
     define: {
       'process.env.VITE_API_URL':
         process.env.NODE_ENV === 'development'
-          ? JSON.stringify('http://0.0.0.0:3000')
+          ? JSON.stringify('http://91.108.122.35:3000')
           : JSON.stringify('http://91.108.122.35:3000')
     }
   },
@@ -46,7 +46,7 @@ export default defineConfig({
     define: {
       'process.env.VITE_API_URL':
         process.env.NODE_ENV === 'development'
-          ? JSON.stringify('http://0.0.0.0:3000')
+          ? JSON.stringify('http://91.108.122.35:3000')
           : JSON.stringify('http://91.108.122.35:3000')
     }
   }

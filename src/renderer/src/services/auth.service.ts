@@ -25,8 +25,6 @@ class AuthService {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
       const response = await api.post<AuthResponse>('/auth/login', credentials)
-      console.log(response.status)
-      console.log(response.data)
       this.setSession(response.data)
 
       // Fetch garages if user has a company

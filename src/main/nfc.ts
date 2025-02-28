@@ -18,10 +18,7 @@ class NFCManager {
 
   private setupIPCHandlers() {
     ipcMain.on('nfc:check-reader', () => {
-      console.log('Checking NFC readers...', {
-        readersCount: this.readers.size,
-        readerNames: Array.from(this.readers.keys())
-      })
+
       this.mainWindow?.webContents.send('nfc:reader-status', this.readers.size > 0)
     })
   }
@@ -29,27 +26,17 @@ class NFCManager {
   private setupNFCEvents() {
     // Événement déclenché lorsqu'un lecteur est connecté
     this.nfc.on('reader', reader => {
-      console.log('Reader connected:', {
-        name: reader.name,
-        reader: reader
-      })
 
       this.readers.set(reader.name, reader)
       this.mainWindow?.webContents.send('nfc:reader-status', true)
 
       // Événement déclenché lorsqu'une carte est présentée au lecteur
       reader.on('card', card => {
-        console.log('Card detected:', {
-          uid: card.uid,
-          type: card.type,
-          standard: card.standard
-        })
         this.mainWindow?.webContents.send('nfc:card-detected', card.uid)
       })
 
       // Événement déclenché lorsqu'une carte est retirée
       reader.on('card.off', () => {
-        console.log('Card removed')
         this.mainWindow?.webContents.send('nfc:card-removed')
       })
 
@@ -60,7 +47,6 @@ class NFCManager {
 
       // Gestion de l'état du lecteur
       reader.on('end', () => {
-        console.log(`Reader ${reader.name} removed`)
         this.readers.delete(reader.name)
         this.mainWindow?.webContents.send('nfc:reader-status', this.readers.size > 0)
       })
@@ -68,7 +54,6 @@ class NFCManager {
 
     // Événement déclenché lorsqu'un lecteur est déconnecté
     this.nfc.on('reader.off', reader => {
-      console.log('Reader disconnected:', reader.name)
       this.readers.delete(reader.name)
       this.mainWindow?.webContents.send('nfc:reader-status', this.readers.size > 0)
     })

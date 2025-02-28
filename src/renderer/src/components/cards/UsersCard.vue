@@ -754,6 +754,39 @@ tr:hover td {
     0 2px 4px -1px rgba(0, 0, 0, 0.1);
 }
 
+.input-wrapper select {
+  width: 100%;
+  padding: 0.6rem 0.75rem 0.6rem 2.25rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--text-primary) !important;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(12px);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+}
+
+.input-wrapper select option {
+  background: rgba(13, 17, 23, 0.95) !important;
+  color: var(--text-primary) !important;
+  padding: 0.75rem;
+}
+
+.input-wrapper select:hover {
+  border-color: rgba(var(--color-primary-rgb), 0.3);
+}
+
+.input-wrapper select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.2);
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;

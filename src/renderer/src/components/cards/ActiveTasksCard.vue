@@ -38,22 +38,18 @@ const filteredTasks = computed(() => {
 
 const fetchTasks = async () => {
   try {
-    console.log('Début du fetchTasks dans ActiveTasksCard')
     loading.value = true
     const fetchedTasks = await taskService.getActiveTasks()
-    console.log('Tâches récupérées dans ActiveTasksCard:', fetchedTasks)
     tasks.value = fetchedTasks
   } catch (error) {
     console.error('Erreur lors du chargement des tâches:', error)
     showToast('Erreur lors du chargement des tâches', 'error')
   } finally {
     loading.value = false
-    console.log('Fin du fetchTasks dans ActiveTasksCard')
   }
 }
 
 const openTaskDetails = (task: Task) => {
-  console.log('Ouverture des détails de la tâche:', task)
   selectedTask.value = task
   isModalOpen.value = true
 }
@@ -118,7 +114,6 @@ const deleteTask = async (taskId: string) => {
 }
 
 onMounted(async () => {
-  console.log('ActiveTasksCard monté, appel de fetchTasks')
   await fetchTasks()
   window.addEventListener('keydown', handleKeyDown)
 })
