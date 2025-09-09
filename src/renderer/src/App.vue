@@ -1,9 +1,18 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import StatusBar from './components/StatusBar.vue'
 import Toaster from './components/Toaster.vue'
+import UpdateNotification from './components/UpdateNotification.vue'
 import { useToast } from './composables/useToast'
+import { useUpdaterStore } from './stores/updater'
 
 const { showToast, toastMessage, toastType } = useToast()
+const updaterStore = useUpdaterStore()
+
+onMounted(() => {
+  // Initialiser le système de mise à jour
+  updaterStore.initializeUpdater()
+})
 </script>
 
 <template>
@@ -12,6 +21,7 @@ const { showToast, toastMessage, toastType } = useToast()
     <StatusBar />
   </div>
   <Toaster v-if="showToast" :message="toastMessage" :type="toastType" :duration="3000" />
+  <UpdateNotification />
 </template>
 
 <style>

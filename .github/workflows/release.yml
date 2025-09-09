@@ -1,0 +1,128 @@
+name: Release & Deploy
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run type checking and linting
+        run: |
+          npm run typecheck
+          npm run lint
+
+      - name: Build application
+        run: npm run build
+
+      - name: Build for Windows
+        if: matrix.os == 'windows-latest'
+        run: npm run build:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build for macOS
+        if: matrix.os == 'macos-latest'
+        run: npm run build:mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Pour le code signing si nécessaire
+          # CSC_LINK: ${{ secrets.MAC_CERTIFICATE }}
+          # CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+
+      - name: Build for Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: npm run build:linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows artifacts
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: |
+            dist/*.exe
+            dist/latest.yml
+
+      - name: Upload macOS artifacts  
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: |
+            dist/*.dmg
+            dist/latest-mac.yml
+
+      - name: Upload Linux artifacts
+        if: matrix.os == 'ubuntu-latest' 
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: |
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.snap
+            dist/latest-linux.yml
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Setup deployment structure
+        run: |
+          mkdir -p deploy/releases/${{ github.event.release.tag_name }}
+          
+          # Windows files
+          cp windows-build/*.exe deploy/releases/${{ github.event.release.tag_name }}/ || true
+          cp windows-build/latest.yml deploy/ || true
+          
+          # macOS files  
+          cp macos-build/*.dmg deploy/releases/${{ github.event.release.tag_name }}/ || true
+          cp macos-build/latest-mac.yml deploy/ || true
+          
+          # Linux files
+          cp linux-build/*.AppImage deploy/releases/${{ github.event.release.tag_name }}/ || true
+          cp linux-build/*.deb deploy/releases/${{ github.event.release.tag_name }}/ || true
+          cp linux-build/*.snap deploy/releases/${{ github.event.release.tag_name }}/ || true
+          cp linux-build/latest-linux.yml deploy/ || true
+
+      - name: Deploy to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "deploy/*"
+          target: "/var/www/karlog-updates/"
+          strip_components: 1
+
+      - name: Update server permissions
+        uses: appleboy/ssh-action@v0.1.11
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            chmod -R 644 /var/www/karlog-updates/
+            find /var/www/karlog-updates/ -type d -exec chmod 755 {} \;

@@ -3,6 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { nfcManager } from './nfc'
+import { updateManager } from './updater'
 
 function createWindow(): void {
   
@@ -43,6 +44,9 @@ function createWindow(): void {
 
   // Set up NFC manager with the main window
   nfcManager.setMainWindow(mainWindow)
+  
+  // Set up update manager with the main window
+  updateManager.setMainWindow(mainWindow)
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -75,7 +79,34 @@ app.whenReady().then(() => {
   // Simple test IPC
   ipcMain.on('ping', () => console.log('pong'))
 
+  // Update management IPC handlers
+  ipcMain.handle('check-for-updates', async () => {
+    try {
+      await updateManager.checkForUpdates()
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('download-update', async () => {
+    try {
+      await updateManager.downloadUpdate()
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('install-update', () => {
+    updateManager.installUpdate()
+    return { success: true }
+  })
+
   createWindow()
+
+  // Démarrer la vérification périodique des mises à jour
+  updateManager.startPeriodicUpdateCheck()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

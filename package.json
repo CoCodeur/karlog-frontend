@@ -16,9 +16,11 @@
     "build": "npm run typecheck && electron-vite build",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
-    "build:win": "cross-env NODE_ENV=production npm run build && electron-builder --win",
-    "build:mac": "cross-env NODE_ENV=production npm run build && electron-builder --mac",
-    "build:linux": "cross-env NODE_ENV=production npm run build && electron-builder --linux"
+    "build:win": "cross-env NODE_ENV=production npm run build && electron-builder --win --publish=always",
+    "build:mac": "cross-env NODE_ENV=production npm run build && electron-builder --mac --publish=always", 
+    "build:linux": "cross-env NODE_ENV=production npm run build && electron-builder --linux --publish=always",
+    "build:release": "cross-env NODE_ENV=production npm run build && electron-builder --publish=always",
+    "check-updates": "echo 'Checking for updates manually...' && npm run dev -- --check-updates"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.0",
