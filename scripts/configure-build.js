@@ -10,7 +10,7 @@ const path = require('path')
 
 // IP du serveur (peut être passée en variable d'environnement)
 const SERVER_IP = process.env.UPDATE_SERVER_IP || '91.108.122.35'
-const PORT = process.env.UPDATE_SERVER_PORT || '8080'
+const PORT = process.env.UPDATE_SERVER_PORT || '3001'
 const FULL_URL = `http://${SERVER_IP}:${PORT}`
 
 console.log(`🔧 Configuration des builds avec serveur: ${FULL_URL}`)

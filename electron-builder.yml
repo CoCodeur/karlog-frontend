@@ -57,4 +57,4 @@ appImage:
 npmRebuild: false
 publish:
   provider: generic
-  url: http://91.108.122.35:8080
+  url: http://91.108.122.35:3001

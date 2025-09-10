@@ -57,4 +57,4 @@ appImage:
 npmRebuild: false
 publish:
   provider: generic
-  url: http://UPDATE_SERVER_IP:8080
+  url: http://UPDATE_SERVER_IP:3001
