@@ -20,7 +20,12 @@
     "build:mac": "cross-env NODE_ENV=production npm run build && electron-builder --mac --publish=always", 
     "build:linux": "cross-env NODE_ENV=production npm run build && electron-builder --linux --publish=always",
     "build:release": "cross-env NODE_ENV=production npm run build && electron-builder --publish=always",
-    "check-updates": "echo 'Checking for updates manually...' && npm run dev -- --check-updates"
+    "check-updates": "echo 'Checking for updates manually...' && npm run dev -- --check-updates",
+    "configure": "node scripts/configure-build.js",
+    "prebuild": "npm run configure",
+    "prebuild:win": "npm run configure",
+    "prebuild:mac": "npm run configure", 
+    "prebuild:linux": "npm run configure"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.0",

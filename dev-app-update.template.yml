@@ -1,0 +1,3 @@
+provider: generic
+url: http://UPDATE_SERVER_IP:8080
+updaterCacheDirName: karlog-frontend-updater
